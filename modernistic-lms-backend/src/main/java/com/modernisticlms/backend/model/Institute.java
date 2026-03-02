@@ -30,7 +30,7 @@ public class Institute {
 
     private String password;
 
-    @Column(columnDefinition = "LONGTEXT")
+    @Column(length = 5000)
     private String description;
 
     private String imageUrl;
@@ -50,9 +50,8 @@ public class Institute {
 
     private Integer instituteRefId;
 
-    @Column(length = 15, columnDefinition = "varchar(15) default '0:0'")
+    @Column(length = 15)
     private String institutePrivileges = "0:0";
 
     private java.math.BigDecimal percentage;
 }
-

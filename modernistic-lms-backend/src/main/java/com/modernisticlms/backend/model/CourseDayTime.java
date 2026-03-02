@@ -17,6 +17,7 @@ public class CourseDayTime {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "day_name")
     private String day;
 
     private LocalTime startTime;
@@ -27,4 +28,3 @@ public class CourseDayTime {
     @JoinColumn(name = "course_id", nullable = false)
     private Course course;
 }
-

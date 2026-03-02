@@ -35,7 +35,7 @@ public class Teacher {
 
     private String status;
 
-    @Column(columnDefinition = "LONGTEXT")
+    @Column(length = 5000)
     private String description;
 
     private String imageUrl;
@@ -57,7 +57,6 @@ public class Teacher {
 
     private int maxEnrolls = 0;
 
-    @Column(length = 15, columnDefinition = "varchar(15) default '0:0:0'")
+    @Column(length = 15)
     private String privileges = "0:0:0";
 }
-

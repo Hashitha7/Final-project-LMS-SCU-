@@ -22,7 +22,7 @@ public class Course {
 
     private String name;
 
-    @Column(columnDefinition = "LONGTEXT")
+    @Column(length = 5000)
     private String description;
 
     private String imageUrl;
@@ -39,7 +39,7 @@ public class Course {
 
     private String status;
 
-    @Column(length = 15, columnDefinition = "varchar(15) default 'NOT_STARTED'")
+    @Column(length = 15)
     private String courseOnGoingStatus = "NOT_STARTED";
 
     private LocalDate startDate;
@@ -54,10 +54,10 @@ public class Course {
 
     private Long currentTeacherId;
 
-    @Column(columnDefinition = "LONGTEXT")
+    @Column(length = 5000)
     private String zoomStartUrl;
 
-    @Column(columnDefinition = "LONGTEXT")
+    @Column(length = 5000)
     private String zoomJoinUrl;
 
     private String zoomMeetingId;
@@ -70,4 +70,3 @@ public class Course {
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<CourseInstallment> installments;
 }
-

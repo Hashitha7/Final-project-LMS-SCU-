@@ -55,7 +55,6 @@ public class Student {
 
     private String currentMeetingId;
 
-    @Column(columnDefinition = "LONGTEXT")
+    @Column(length = 5000)
     private String currentZoomMeetingUrl;
 }
-

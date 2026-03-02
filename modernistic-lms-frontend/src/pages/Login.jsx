@@ -22,7 +22,7 @@ const Login = () => {
       if (!identifier || !password)
         throw new Error('Please fill all fields');
 
-      // Pass role so backend knows which table to look up
+      // Backend role is empty by default so it searches INSTITUTE -> TEACHER -> STUDENT
       await login({ identifier, password, role: selectedRole });
 
       toast.success('Login successful');
@@ -35,8 +35,7 @@ const Login = () => {
       setLoading(false);
     }
   };
-
-  const [selectedRole, setSelectedRole] = useState('INSTITUTE');
+  const [selectedRole, setSelectedRole] = useState('');
 
   // Demo accounts matching the new advance_lms schema
   const demoUsers = [

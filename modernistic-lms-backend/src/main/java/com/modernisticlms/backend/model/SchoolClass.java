@@ -25,10 +25,10 @@ public class SchoolClass {
 
     private String grade;
 
-    @Column(columnDefinition = "LONGTEXT")
+    @Column(length = 5000)
     private String description;
 
-    @Column(columnDefinition = "LONGTEXT")
+    @Column(length = 5000)
     private String syllabus;
 
     private BigDecimal fee;
@@ -41,7 +41,7 @@ public class SchoolClass {
 
     private long videoSize = 0;
 
-    @Column(length = 15, columnDefinition = "varchar(15) default 'NOT_STARTED'")
+    @Column(length = 15)
     private String classOnGoingStatus = "NOT_STARTED";
 
     private int activeStatus = 1;
@@ -50,10 +50,10 @@ public class SchoolClass {
 
     private LocalDateTime lastMeetingStartedAt;
 
-    @Column(columnDefinition = "LONGTEXT")
+    @Column(length = 5000)
     private String zoomStartUrl;
 
-    @Column(columnDefinition = "LONGTEXT")
+    @Column(length = 5000)
     private String zoomJoinUrl;
 
     private String zoomMeetingId;
@@ -67,4 +67,3 @@ public class SchoolClass {
     @OneToMany(mappedBy = "schoolClass", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<ClassDayTime> dayTimes;
 }
-

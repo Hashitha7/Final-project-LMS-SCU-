@@ -3,7 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLmsData } from '@/contexts/LmsDataContext';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -241,11 +241,11 @@ const Teachers = () => {
                             <DialogTitle className="text-xl font-bold">
                                 {isEditing ? '✏️ Edit Teacher' : '➕ Add New Teacher'}
                             </DialogTitle>
-                            <p className="text-sm text-slate-500 mt-1">
+                            <DialogDescription className="text-sm text-slate-500 mt-1">
                                 {isEditing
                                     ? 'Update the teacher details below. Leave password blank to keep the existing one.'
                                     : 'Fill in the details to create a new teacher account.'}
-                            </p>
+                            </DialogDescription>
                         </DialogHeader>
 
                         <div className="grid gap-4 py-2">
