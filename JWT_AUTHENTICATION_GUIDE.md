@@ -1,7 +1,7 @@
-# JWT Authentication Implementation - EduSpark Hub
+# JWT Authentication Implementation - Modernistic LMS
 
 ## Overview
-This document describes the complete JWT (JSON Web Token) authentication and authorization system implemented for the EduSpark Hub LMS platform.
+This document describes the complete JWT (JSON Web Token) authentication and authorization system implemented for the Modernistic LMS LMS platform.
 
 ## Backend Implementation
 
@@ -101,8 +101,8 @@ This document describes the complete JWT (JSON Web Token) authentication and aut
 ### 5. Configuration (application.properties)
 ```properties
 # JWT Configuration
-eduspark.app.jwtSecret=EdusparkSecretKeyForJwtAuthenticationShouldBeLongEnoughToBeeSecure1234567890
-eduspark.app.jwtExpirationMs=86400000  # 24 hours
+Modernistic LMS.app.jwtSecret=Modernistic LMSSecretKeyForJwtAuthenticationShouldBeLongEnoughToBeeSecure1234567890
+Modernistic LMS.app.jwtExpirationMs=86400000  # 24 hours
 ```
 
 ### 6. Password Encryption
@@ -183,22 +183,22 @@ export const auth = {
 All demo users have password: `demo123`
 
 1. **Student:**
-   - Email: `alex@eduspark.com`
+   - Email: `alex@Modernistic LMS.com`
    - Role: STUDENT
 
 2. **Teacher:**
-   - Email: `james@eduspark.com`
+   - Email: `james@Modernistic LMS.com`
    - Role: TEACHER
 
 3. **Admin:**
-   - Email: `admin@eduspark.com`
+   - Email: `admin@Modernistic LMS.com`
    - Role: ADMIN
 
 ### Testing Login
 ```bash
 curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"alex@eduspark.com","password":"demo123"}'
+  -d '{"email":"alex@Modernistic LMS.com","password":"demo123"}'
 ```
 
 ### Testing Protected Endpoint
@@ -212,8 +212,8 @@ curl -X GET http://localhost:8080/api/users/me \
 ### 1. Environment Variables
 Move sensitive configuration to environment variables:
 ```properties
-eduspark.app.jwtSecret=${JWT_SECRET}
-eduspark.app.jwtExpirationMs=${JWT_EXPIRATION:86400000}
+Modernistic LMS.app.jwtSecret=${JWT_SECRET}
+Modernistic LMS.app.jwtExpirationMs=${JWT_EXPIRATION:86400000}
 ```
 
 ### 2. HTTPS
@@ -333,3 +333,4 @@ The JWT authentication system provides:
 - ✅ Protected API endpoints
 
 All authentication and authorization functionality is now properly implemented and ready for use!
+
