@@ -60,9 +60,30 @@ export const users = {
     api.get('/teachers').then(r => r.data.map(t => ({ ...t, role: 'teacher' }))),
     api.get('/students').then(r => r.data.map(s => ({ ...s, role: 'student' }))),
   ]).then(([t, s]) => [...t, ...s]),
-  getById: (id) => api.get(`/students/${id}`).then(r => r.data),
-  create: (data) => api.post('/students', data).then(r => r.data),
-  delete: (id) => api.delete(`/students/${id}`),
+  getById: (id, role) => {
+    const endpoint = role === 'teacher' ? '/teachers' : '/students';
+    return api.get(`${endpoint}/${id}`).then(r => r.data);
+  },
+  create: (data) => {
+    // Route to correct endpoint based on role
+    if (data.role === 'teacher') {
+      if (data.id) {
+        // Update existing teacher via PUT
+        return api.put(`/teachers/${data.id}`, data).then(r => r.data);
+      }
+      return api.post('/teachers', data).then(r => r.data);
+    } else {
+      if (data.id) {
+        // Update existing student via PUT
+        return api.put(`/students/${data.id}`, data).then(r => r.data);
+      }
+      return api.post('/students', data).then(r => r.data);
+    }
+  },
+  delete: (id, role) => {
+    const endpoint = role === 'teacher' ? '/teachers' : '/students';
+    return api.delete(`${endpoint}/${id}`);
+  },
 };
 
 // ── Courses ───────────────────────────────────────────────

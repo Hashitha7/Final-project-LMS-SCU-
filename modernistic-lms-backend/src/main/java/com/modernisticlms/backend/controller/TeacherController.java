@@ -51,6 +51,7 @@ public class TeacherController {
             teacher.setStatus(updated.getStatus());
             teacher.setDescription(updated.getDescription());
             teacher.setImageUrl(updated.getImageUrl());
+            teacher.setMaxEnrolls(updated.getMaxEnrolls());
             if (updated.getPassword() != null && !updated.getPassword().isEmpty()) {
                 teacher.setPassword(passwordEncoder.encode(updated.getPassword()));
             }
@@ -64,4 +65,3 @@ public class TeacherController {
         return ResponseEntity.noContent().build();
     }
 }
-

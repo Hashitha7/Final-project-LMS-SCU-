@@ -82,7 +82,7 @@ export const LmsDataProvider = ({ children }) => {
         submissions,
 
         upsertUser: async (user) => { await api.users.create(user); refreshUsers(); },
-        deleteUser: async (id) => { await api.users.delete(id); refreshUsers(); },
+        deleteUser: async (id, role) => { await api.users.delete(id, role); refreshUsers(); },
 
         upsertCourse: async (course) => { await api.courses.create(course); refreshCourses(); },
         deleteCourse: async (id) => { await api.courses.delete(id); refreshCourses(); },
