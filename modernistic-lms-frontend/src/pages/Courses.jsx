@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
+import { files as filesApi } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -77,42 +78,71 @@ const Courses = () => {
   // Filter Logic
   const filteredCourses = useMemo(() => {
     return courses
-      .filter(c => c.title.toLowerCase().includes(search.toLowerCase()) || (c.description && c.description.toLowerCase().includes(search.toLowerCase())))
-      .sort((a, b) => a.title.localeCompare(b.title));
+      .filter(c => {
+        const cName = (c.title || c.name || '').toLowerCase();
+        const cDesc = (c.description || '').toLowerCase();
+        return cName.includes(search.toLowerCase()) || cDesc.includes(search.toLowerCase());
+      })
+      .sort((a, b) => (a.title || a.name || '').localeCompare(b.title || b.name || ''));
   }, [courses, search]);
 
   // Helpers
-  const handleFileSelect = (e, type) => {
+  const [uploading, setUploading] = useState({ image: false, video: false });
+
+  const handleFileSelect = async (e, type) => {
     const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData(prev => ({ ...prev, [type]: reader.result }));
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    // Validate file size (100MB max)
+    if (file.size > 100 * 1024 * 1024) {
+      toast.error('File size exceeds 100MB limit');
+      return;
+    }
+
+    setUploading(prev => ({ ...prev, [type]: true }));
+    try {
+      const result = await filesApi.upload(file, 'courses');
+      setFormData(prev => ({ ...prev, [type]: result.url }));
+      toast.success(`${type === 'image' ? 'Image' : 'Video'} uploaded successfully!`);
+    } catch (err) {
+      toast.error(`Upload failed: ${err?.response?.data?.message || err.message}`);
+    } finally {
+      setUploading(prev => ({ ...prev, [type]: false }));
     }
   };
 
   const getEnrollments = (courseId) => users.filter(u => u.role === 'student').slice(0, 5); // Mock
   const getDeposits = (courseId) => payments.slice(0, 3); // Mock
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.title || !formData.startDate || !formData.endDate) {
       toast.error('Please fill in all required fields.');
       return;
     }
 
+    // Map frontend field names to backend Course model field names
     const payload = {
-      ...formData,
-      id: formData.id || uid(),
-      price: Number(formData.price) || 0,
-      installments: Number(formData.installments) || 1,
-      semesters: Number(formData.semesters) || 1,
+      ...(formData.id ? { id: formData.id } : {}),
+      name: formData.title,
+      description: formData.description || '',
+      imageUrl: formData.image || '',
+      videoUrl: formData.video || '',
+      totalFee: Number(formData.price) || 0,
+      noOfInstallments: Number(formData.installments) || 1,
+      noOfSemesters: Number(formData.semesters) || 1,
+      startDate: formData.startDate,
+      endDate: formData.endDate,
+      status: formData.status || 'active',
+      currentTeacherId: formData.teacherId ? Number(formData.teacherId) : null,
     };
 
-    upsertCourse(payload);
-    toast.success(formData.id ? 'Course updated successfully' : 'Course created successfully');
-    resetForm();
+    try {
+      await upsertCourse(payload);
+      toast.success(formData.id ? 'Course updated successfully' : 'Course created successfully');
+      resetForm();
+    } catch (err) {
+      toast.error(`Failed to save course: ${err?.response?.data?.message || err.message}`);
+    }
   };
 
   const handleDelete = (id) => {
@@ -151,11 +181,21 @@ const Courses = () => {
 
   const startEdit = (course) => {
     setFormData({
-      ...course,
-      price: course.price.toString(),
-      installments: course.installments?.toString() || '',
-      semesters: course.semesters?.toString() || '',
-      timeTable: course.timeTable || [],
+      id: course.id,
+      title: course.title || course.name || '',
+      description: course.description || '',
+      image: course.image || course.imageUrl || null,
+      video: course.video || course.videoUrl || null,
+      startDate: course.startDate || '',
+      endDate: course.endDate || '',
+      price: (course.price || course.totalFee || 0).toString(),
+      installments: (course.installments || course.noOfInstallments || '').toString(),
+      semesters: (course.semesters || course.noOfSemesters || '').toString(),
+      installmentPrice: '',
+      timeTable: course.timeTable || course.dayTimes || [],
+      teacherId: course.teacherId || course.currentTeacherId || '',
+      status: course.status || 'active',
+      tags: course.tags || [],
     });
     setView('edit');
   };
@@ -177,9 +217,14 @@ const Courses = () => {
           <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Course Image</Label>
           <div
             className="h-48 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl flex flex-col items-center justify-center text-muted-foreground bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer group"
-            onClick={() => imageInputRef.current?.click()}
+            onClick={() => !uploading.image && imageInputRef.current?.click()}
           >
-            {formData.image ? (
+            {uploading.image ? (
+              <div className="flex flex-col items-center text-blue-600">
+                <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-2" />
+                <span className="text-sm font-medium">Uploading to S3...</span>
+              </div>
+            ) : formData.image ? (
               <img src={formData.image} alt="Preview" className="h-full w-full object-cover rounded-lg" />
             ) : (
               <>
@@ -196,22 +241,28 @@ const Courses = () => {
           <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Course Video (Optional)</Label>
           <div
             className="h-48 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl flex flex-col items-center justify-center text-muted-foreground bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer group"
-            onClick={() => videoInputRef.current?.click()}
+            onClick={() => !uploading.video && videoInputRef.current?.click()}
           >
-            {formData.video ? (
+            {uploading.video ? (
+              <div className="flex flex-col items-center text-blue-600">
+                <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-2" />
+                <span className="text-sm font-medium">Uploading to S3...</span>
+              </div>
+            ) : formData.video ? (
               <div className="flex flex-col items-center text-green-600">
                 <CheckCircle2 className="w-10 h-10 mb-2" />
-                <span className="text-sm font-medium">Video Selected</span>
+                <span className="text-sm font-medium">Video Uploaded ✓</span>
+                <span className="text-xs text-slate-400 mt-1 truncate max-w-[200px]">{formData.video}</span>
               </div>
             ) : (
               <>
                 <div className="p-3 bg-white rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform">
                   <Upload className="w-6 h-6 text-slate-400 group-hover:text-primary" />
                 </div>
-                <span className="text-xs font-medium text-slate-500">Click to upload intro video</span>
+                <span className="text-xs font-medium text-slate-500">Click to upload intro video (max 100MB)</span>
               </>
             )}
-            <input type="file" ref={videoInputRef} className="hidden" accept="video/*" onChange={e => handleFileSelect(e, 'video')} />
+            <input type="file" ref={videoInputRef} className="hidden" accept="video/*,.pdf,.doc,.docx,.ppt,.pptx" onChange={e => handleFileSelect(e, 'video')} />
           </div>
         </div>
       </div>
@@ -397,8 +448,8 @@ const Courses = () => {
                     {/* Left: Image & Details */}
                     <div className="w-full lg:w-[450px] flex-shrink-0 flex flex-col gap-6">
                       <div className="aspect-video w-full bg-slate-100 dark:bg-slate-800 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 relative group shadow-inner">
-                        {course.image ? (
-                          <img src={course.image} alt={course.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                        {(course.image || course.imageUrl) ? (
+                          <img src={course.image || course.imageUrl} alt={course.title || course.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-slate-400 bg-slate-50 dark:bg-slate-800/50">
                             <div className="flex flex-col items-center gap-2">
@@ -421,7 +472,7 @@ const Courses = () => {
                           </div>
                           <div className="flex flex-col text-right">
                             <span className="text-xs text-slate-500 font-semibold mb-0.5">Total Fee :</span>
-                            <span className="text-slate-700 dark:text-slate-300 font-bold">{course.price || 0}</span>
+                            <span className="text-slate-700 dark:text-slate-300 font-bold">{course.price || course.totalFee || 0}</span>
                           </div>
                           <div className="flex flex-col">
                             <span className="text-xs text-slate-500 font-semibold mb-0.5">End Date :</span>
@@ -429,11 +480,11 @@ const Courses = () => {
                           </div>
                           <div className="flex flex-col text-right">
                             <span className="text-xs text-slate-500 font-semibold mb-0.5">Number Allocated Teacher :</span>
-                            <span className="text-slate-700 dark:text-slate-300 font-medium">{course.teacherId ? '1' : '0'}</span>
+                            <span className="text-slate-700 dark:text-slate-300 font-medium">{(course.teacherId || course.currentTeacherId) ? '1' : '0'}</span>
                           </div>
                           <div className="flex flex-col col-span-2">
                             <span className="text-xs text-slate-500 font-semibold mb-0.5">Number of Semesters :</span>
-                            <span className="text-slate-700 dark:text-slate-300 font-medium">{course.semesters || '0'}</span>
+                            <span className="text-slate-700 dark:text-slate-300 font-medium">{course.semesters || course.noOfSemesters || '0'}</span>
                           </div>
                         </div>
                       </div>
@@ -443,7 +494,7 @@ const Courses = () => {
                     <div className="flex-1 flex flex-col gap-6 w-full">
                       <div>
                         <span className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Course Name :</span>
-                        <h2 className="text-3xl font-bold text-slate-800 dark:text-blue-500 leading-tight">{course.title}</h2>
+                        <h2 className="text-3xl font-bold text-slate-800 dark:text-blue-500 leading-tight">{course.title || course.name}</h2>
                       </div>
 
                       <div className="flex-1">
@@ -546,7 +597,7 @@ const Courses = () => {
         <Dialog open={!!viewEnrollments} onOpenChange={(o) => !o && setViewEnrollments(null)}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Enrollments for {viewEnrollments?.title}</DialogTitle>
+              <DialogTitle>Enrollments for {viewEnrollments?.title || viewEnrollments?.name}</DialogTitle>
             </DialogHeader>
             <div className="py-4 space-y-2">
               {viewEnrollments && getEnrollments(viewEnrollments.id).length > 0 ? getEnrollments(viewEnrollments.id).map(student => (
@@ -568,7 +619,7 @@ const Courses = () => {
         <Dialog open={!!viewDeposits} onOpenChange={(o) => !o && setViewDeposits(null)}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Deposit Slips for {viewDeposits?.title}</DialogTitle>
+              <DialogTitle>Deposit Slips for {viewDeposits?.title || viewDeposits?.name}</DialogTitle>
             </DialogHeader>
             <div className="py-4 space-y-2">
               {viewDeposits && getDeposits(viewDeposits.id).length > 0 ? getDeposits(viewDeposits.id).map(p => (
@@ -590,7 +641,7 @@ const Courses = () => {
               <DialogTitle>Manually Enroll Student</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
-              <p className="text-sm text-slate-500">Select a student to enroll in {manualEnroll?.title}.</p>
+              <p className="text-sm text-slate-500">Select a student to enroll in {manualEnroll?.title || manualEnroll?.name}.</p>
               <Select>
                 <SelectTrigger>
                   <SelectValue placeholder="Select Student" />

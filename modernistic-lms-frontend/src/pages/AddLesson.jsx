@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useLmsData } from '@/contexts/LmsDataContext';
+import { files as filesApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,13 +15,16 @@ import { CheckCircle2, Upload, ArrowLeft, ChevronRight } from 'lucide-react';
 
 const AddLesson = () => {
     const navigate = useNavigate();
-    const { users } = useLmsData();
+    const { users, courses, upsertLesson } = useLmsData();
     const [currentStep, setCurrentStep] = useState(1);
+    const [uploading, setUploading] = useState({ image: false, video: false });
 
     const [formData, setFormData] = useState({
         teacherId: '',
         lessonName: '',
         description: '',
+        fee: '',
+        validityDays: '',
         image: null,
         video: null,
         sellSeparately: false,
@@ -28,43 +32,89 @@ const AddLesson = () => {
         pdfs: [],
         selectedClasses: []
     });
-    const { courses } = useLmsData();
 
     const steps = [
         { id: 1, label: 'Add Lesson' },
         { id: 2, label: 'Add Videos' },
         { id: 3, label: 'Add Pdfs' },
         { id: 4, label: 'Add Classes' },
-        { id: 5, label: 'Add Course' } // Matches screenshot even if it might be a typo for "Finish"
+        { id: 5, label: 'Add Course' }
     ];
 
-    const handleFileSelect = (e, type, index = null) => {
+    // S3 Upload for image/video
+    const handleS3Upload = async (e, type) => {
         const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                if (type === 'pdfs') {
-                    setFormData(prev => ({
-                        ...prev,
-                        pdfs: [...prev.pdfs, { name: file.name, url: reader.result }]
-                    }));
-                } else if (type === 'videos') {
-                    // For videos in step 2 (assuming they might be file uploads too)
-                    setFormData(prev => {
-                        const newVideos = [...prev.videos];
-                        newVideos[index] = { ...newVideos[index], url: reader.result, file: file };
-                        return { ...prev, videos: newVideos };
-                    });
-                } else {
-                    setFormData(prev => ({ ...prev, [type]: reader.result }));
-                }
-            };
-            reader.readAsDataURL(file);
+        if (!file) return;
+
+        if (file.size > 100 * 1024 * 1024) {
+            toast.error('File size exceeds 100MB limit');
+            return;
+        }
+
+        setUploading(prev => ({ ...prev, [type]: true }));
+        try {
+            const result = await filesApi.upload(file, 'lessons');
+            setFormData(prev => ({ ...prev, [type]: result.url }));
+            toast.success(`${type === 'image' ? 'Image' : 'Video'} uploaded to S3!`);
+        } catch (err) {
+            toast.error(`Upload failed: ${err?.response?.data?.message || err.message}`);
+        } finally {
+            setUploading(prev => ({ ...prev, [type]: false }));
+        }
+    };
+
+    // S3 Upload for additional videos
+    const handleVideoUpload = async (e, index) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (file.size > 100 * 1024 * 1024) {
+            toast.error('File size exceeds 100MB limit');
+            return;
+        }
+
+        const updatedVideos = [...formData.videos];
+        updatedVideos[index] = { ...updatedVideos[index], uploading: true };
+        setFormData(prev => ({ ...prev, videos: updatedVideos }));
+
+        try {
+            const result = await filesApi.upload(file, 'lessons/videos');
+            const newVideos = [...formData.videos];
+            newVideos[index] = { ...newVideos[index], url: result.url, uploading: false };
+            setFormData(prev => ({ ...prev, videos: newVideos }));
+            toast.success('Video uploaded to S3!');
+        } catch (err) {
+            const newVideos = [...formData.videos];
+            newVideos[index] = { ...newVideos[index], uploading: false };
+            setFormData(prev => ({ ...prev, videos: newVideos }));
+            toast.error(`Upload failed: ${err?.response?.data?.message || err.message}`);
+        }
+    };
+
+    // S3 Upload for PDFs
+    const handlePdfUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (file.size > 100 * 1024 * 1024) {
+            toast.error('File size exceeds 100MB limit');
+            return;
+        }
+
+        try {
+            const result = await filesApi.upload(file, 'lessons/pdfs');
+            setFormData(prev => ({
+                ...prev,
+                pdfs: [...prev.pdfs, { name: file.name, url: result.url }]
+            }));
+            toast.success('PDF uploaded to S3!');
+        } catch (err) {
+            toast.error(`Upload failed: ${err?.response?.data?.message || err.message}`);
         }
     };
 
     const addVideoRow = () => {
-        setFormData(prev => ({ ...prev, videos: [...prev.videos, { title: '', url: '' }] }));
+        setFormData(prev => ({ ...prev, videos: [...prev.videos, { title: '', url: '', uploading: false }] }));
     };
 
     const removeVideoRow = (index) => {
@@ -90,9 +140,31 @@ const AddLesson = () => {
         });
     };
 
-    const handleSave = () => {
-        toast.success("Lesson saved successfully!");
-        navigate('/app/lessons');
+    const handleSave = async () => {
+        if (!formData.lessonName) {
+            toast.error('Please enter a lesson name.');
+            return;
+        }
+
+        // Map frontend fields to backend Lesson model fields
+        const payload = {
+            name: formData.lessonName,
+            description: formData.description || '',
+            image: formData.image || '',
+            previewVideo: formData.video || '',
+            fee: Number(formData.fee) || 0,
+            validityDays: Number(formData.validityDays) || 0,
+            activeStatus: 1,
+            teacher: formData.teacherId ? { id: Number(formData.teacherId) } : null,
+        };
+
+        try {
+            await upsertLesson(payload);
+            toast.success("Lesson saved to database successfully!");
+            navigate('/app/lessons');
+        } catch (err) {
+            toast.error(`Failed to save lesson: ${err?.response?.data?.message || err.message}`);
+        }
     };
 
     return (
@@ -135,7 +207,6 @@ const AddLesson = () => {
                         {currentStep === 1 && (
                             <div className="space-y-8 max-w-4xl mx-auto">
                                 <div className="space-y-8">
-                                    {/* ... Step 1 Fields ... */}
                                     {/* Teacher Selection */}
                                     <div className="space-y-4">
                                         <Label className="text-base font-semibold text-slate-700 dark:text-slate-300">
@@ -147,7 +218,7 @@ const AddLesson = () => {
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {users.filter(u => u.role === 'teacher').map(teacher => (
-                                                    <SelectItem key={teacher.id} value={teacher.id}>{teacher.name}</SelectItem>
+                                                    <SelectItem key={teacher.id} value={teacher.id.toString()}>{teacher.name}</SelectItem>
                                                 ))}
                                             </SelectContent>
                                         </Select>
@@ -156,7 +227,7 @@ const AddLesson = () => {
                                     {/* Lesson Name */}
                                     <div className="space-y-4">
                                         <Label className="text-base font-semibold text-slate-700 dark:text-slate-300">
-                                            Lesson Name
+                                            Lesson Name *
                                         </Label>
                                         <Input
                                             placeholder="Enter lesson name"
@@ -179,28 +250,65 @@ const AddLesson = () => {
                                         />
                                     </div>
 
-                                    {/* Uploads Grid */}
+                                    {/* Fee and Validity */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <div className="space-y-4">
+                                            <Label className="text-base font-semibold text-slate-700 dark:text-slate-300">
+                                                Fee (LKR)
+                                            </Label>
+                                            <Input
+                                                type="number"
+                                                placeholder="0"
+                                                className="h-12 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                                                value={formData.fee}
+                                                onChange={(e) => setFormData({ ...formData, fee: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="space-y-4">
+                                            <Label className="text-base font-semibold text-slate-700 dark:text-slate-300">
+                                                Validity (Days)
+                                            </Label>
+                                            <Input
+                                                type="number"
+                                                placeholder="30"
+                                                className="h-12 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                                                value={formData.validityDays}
+                                                onChange={(e) => setFormData({ ...formData, validityDays: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Uploads Grid — S3 Upload */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                         {/* Image Upload */}
                                         <div className="space-y-4">
                                             <Label className="text-base font-semibold text-slate-700 dark:text-slate-300">
                                                 Lesson Image
                                             </Label>
-                                            <div className="relative group cursor-pointer border-2 border-dashed border-blue-200 dark:border-blue-900 rounded-xl bg-blue-50/50 dark:bg-blue-900/20 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all h-[180px] flex flex-col items-center justify-center text-center p-6">
+                                            <div
+                                                className="relative group cursor-pointer border-2 border-dashed border-blue-200 dark:border-blue-900 rounded-xl bg-blue-50/50 dark:bg-blue-900/20 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all h-[180px] flex flex-col items-center justify-center text-center p-6"
+                                                onClick={() => !uploading.image && document.getElementById('lesson-image-input')?.click()}
+                                            >
                                                 <input
+                                                    id="lesson-image-input"
                                                     type="file"
                                                     accept="image/*"
-                                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                                                    onChange={(e) => handleFileSelect(e, 'image')}
+                                                    className="hidden"
+                                                    onChange={(e) => handleS3Upload(e, 'image')}
                                                 />
-                                                {formData.image ? (
+                                                {uploading.image ? (
+                                                    <div className="flex flex-col items-center text-blue-600">
+                                                        <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-2" />
+                                                        <span className="text-sm font-medium">Uploading to S3...</span>
+                                                    </div>
+                                                ) : formData.image ? (
                                                     <img src={formData.image} alt="Preview" className="h-full w-full object-contain rounded-lg" />
                                                 ) : (
                                                     <>
                                                         <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-3">
                                                             <Upload className="w-6 h-6" />
                                                         </div>
-                                                        <p className="text-sm font-bold text-blue-600 dark:text-blue-400">Drag Files or Click to Browse</p>
+                                                        <p className="text-sm font-bold text-blue-600 dark:text-blue-400">Click to Upload Image</p>
                                                     </>
                                                 )}
                                             </div>
@@ -211,21 +319,34 @@ const AddLesson = () => {
                                             <Label className="text-base font-semibold text-slate-700 dark:text-slate-300">
                                                 Introduction Video
                                             </Label>
-                                            <div className="relative group cursor-pointer border-2 border-dashed border-blue-200 dark:border-blue-900 rounded-xl bg-blue-50/50 dark:bg-blue-900/20 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all h-[180px] flex flex-col items-center justify-center text-center p-6">
+                                            <div
+                                                className="relative group cursor-pointer border-2 border-dashed border-blue-200 dark:border-blue-900 rounded-xl bg-blue-50/50 dark:bg-blue-900/20 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all h-[180px] flex flex-col items-center justify-center text-center p-6"
+                                                onClick={() => !uploading.video && document.getElementById('lesson-video-input')?.click()}
+                                            >
                                                 <input
+                                                    id="lesson-video-input"
                                                     type="file"
                                                     accept="video/*"
-                                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                                                    onChange={(e) => handleFileSelect(e, 'video')}
+                                                    className="hidden"
+                                                    onChange={(e) => handleS3Upload(e, 'video')}
                                                 />
-                                                {formData.video ? (
-                                                    <video src={formData.video} className="h-full w-full object-contain rounded-lg" controls />
+                                                {uploading.video ? (
+                                                    <div className="flex flex-col items-center text-blue-600">
+                                                        <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-2" />
+                                                        <span className="text-sm font-medium">Uploading to S3...</span>
+                                                    </div>
+                                                ) : formData.video ? (
+                                                    <div className="flex flex-col items-center text-green-600">
+                                                        <CheckCircle2 className="w-10 h-10 mb-2" />
+                                                        <span className="text-sm font-medium">Video Uploaded ✓</span>
+                                                        <span className="text-xs text-slate-400 mt-1 truncate max-w-[200px]">{formData.video}</span>
+                                                    </div>
                                                 ) : (
                                                     <>
                                                         <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-3">
                                                             <Upload className="w-6 h-6" />
                                                         </div>
-                                                        <p className="text-sm font-bold text-blue-600 dark:text-blue-400">Drag Files or Click to Browse</p>
+                                                        <p className="text-sm font-bold text-blue-600 dark:text-blue-400">Click to Upload Video (max 100MB)</p>
                                                     </>
                                                 )}
                                             </div>
@@ -267,16 +388,33 @@ const AddLesson = () => {
                                                 <Input value={video.title} onChange={(e) => updateVideoRow(index, 'title', e.target.value)} placeholder="Lesson Part 01" />
                                             </div>
                                             <div className="space-y-2">
-                                                <Label>Video File/URL</Label>
+                                                <Label>Video File</Label>
                                                 <div className="flex gap-2">
-                                                    <div className="relative flex-1">
-                                                        <Input value={video.url ? 'File Uploaded' : ''} readOnly placeholder="Upload Video" />
-                                                        <input
-                                                            type="file"
-                                                            accept="video/*"
-                                                            className="absolute inset-0 opacity-0 cursor-pointer"
-                                                            onChange={(e) => handleFileSelect(e, 'videos', index)}
-                                                        />
+                                                    <div className="flex-1">
+                                                        {video.uploading ? (
+                                                            <div className="h-10 flex items-center gap-2 text-blue-600 text-sm">
+                                                                <div className="w-5 h-5 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+                                                                Uploading...
+                                                            </div>
+                                                        ) : video.url ? (
+                                                            <div className="h-10 flex items-center gap-2 text-green-600 text-sm">
+                                                                <CheckCircle2 className="w-4 h-4" />
+                                                                <span className="truncate">{video.url}</span>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="relative">
+                                                                <Button variant="outline" className="w-full" onClick={() => document.getElementById(`video-input-${index}`)?.click()}>
+                                                                    <Upload className="w-4 h-4 mr-2" /> Upload Video
+                                                                </Button>
+                                                                <input
+                                                                    id={`video-input-${index}`}
+                                                                    type="file"
+                                                                    accept="video/*"
+                                                                    className="hidden"
+                                                                    onChange={(e) => handleVideoUpload(e, index)}
+                                                                />
+                                                            </div>
+                                                        )}
                                                     </div>
                                                     <Button variant="ghost" size="icon" onClick={() => removeVideoRow(index)} className="text-red-500 hover:text-red-600 hover:bg-red-50">
                                                         <div className="h-5 w-5 bg-red-100 rounded flex items-center justify-center">x</div>
@@ -297,19 +435,22 @@ const AddLesson = () => {
                             <div className="space-y-8 max-w-4xl mx-auto">
                                 <div className="space-y-4">
                                     <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Add Lesson PDFs</h3>
-                                    <div className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-8 flex flex-col items-center justify-center text-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors relative cursor-pointer">
+                                    <div
+                                        className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-8 flex flex-col items-center justify-center text-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
+                                        onClick={() => document.getElementById('pdf-input')?.click()}
+                                    >
                                         <input
+                                            id="pdf-input"
                                             type="file"
                                             accept=".pdf"
-                                            multiple
-                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                            onChange={(e) => handleFileSelect(e, 'pdfs')}
+                                            className="hidden"
+                                            onChange={handlePdfUpload}
                                         />
                                         <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center justify-center mb-3">
                                             <Upload className="w-6 h-6" />
                                         </div>
-                                        <p className="font-medium text-slate-900 dark:text-slate-100">Click to upload PDFs</p>
-                                        <p className="text-sm text-slate-500 mt-1">Support for PDF files</p>
+                                        <p className="font-medium text-slate-900 dark:text-slate-100">Click to upload PDFs to S3</p>
+                                        <p className="text-sm text-slate-500 mt-1">Support for PDF files (max 100MB)</p>
                                     </div>
 
                                     {formData.pdfs.length > 0 && (
@@ -320,7 +461,10 @@ const AddLesson = () => {
                                                         <div className="bg-red-100 text-red-600 p-2 rounded">
                                                             <div className="text-xs font-bold">PDF</div>
                                                         </div>
-                                                        <span className="text-sm font-medium">{pdf.name}</span>
+                                                        <div>
+                                                            <span className="text-sm font-medium">{pdf.name}</span>
+                                                            <a href={pdf.url} target="_blank" rel="noopener noreferrer" className="block text-xs text-blue-500 hover:underline truncate max-w-[300px]">{pdf.url}</a>
+                                                        </div>
                                                     </div>
                                                     <Button variant="ghost" size="sm" onClick={() => setFormData(prev => ({ ...prev, pdfs: prev.pdfs.filter((_, i) => i !== idx) }))}>
                                                         Remove
@@ -359,8 +503,8 @@ const AddLesson = () => {
                                                         {formData.selectedClasses.includes(course.id) && <CheckCircle2 className="w-3.5 h-3.5" />}
                                                     </div>
                                                     <div>
-                                                        <h4 className="font-semibold text-slate-900 dark:text-slate-100">{course.title}</h4>
-                                                        <p className="text-xs text-slate-500 mt-1">{course.grade} Grade</p>
+                                                        <h4 className="font-semibold text-slate-900 dark:text-slate-100">{course.title || course.name}</h4>
+                                                        <p className="text-xs text-slate-500 mt-1">{course.description?.substring(0, 60) || 'No description'}</p>
                                                     </div>
                                                 </div>
                                             </div>
@@ -383,6 +527,8 @@ const AddLesson = () => {
                                 <p className="text-slate-500 max-w-md mx-auto">
                                     You are about to add "<span className="font-medium text-slate-900 dark:text-white">{formData.lessonName}</span>"
                                     to {formData.selectedClasses.length} courses with {formData.videos.length} videos and {formData.pdfs.length} PDFs.
+                                    {formData.image && ' Image uploaded to S3.'}
+                                    {formData.video && ' Video uploaded to S3.'}
                                 </p>
 
                                 <div className="flex flex-col gap-3 max-w-xs mx-auto pt-6">
@@ -403,4 +549,3 @@ const AddLesson = () => {
 };
 
 export default AddLesson;
-

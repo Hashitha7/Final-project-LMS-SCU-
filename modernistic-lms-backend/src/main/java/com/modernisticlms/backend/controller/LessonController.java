@@ -40,6 +40,7 @@ public class LessonController {
             lesson.setFee(updated.getFee());
             lesson.setImage(updated.getImage());
             lesson.setPreviewVideo(updated.getPreviewVideo());
+            lesson.setPreviewVideoSize(updated.getPreviewVideoSize());
             lesson.setValidityDays(updated.getValidityDays());
             lesson.setActiveStatus(updated.getActiveStatus());
             lesson.setTeacher(updated.getTeacher());
@@ -53,4 +54,3 @@ public class LessonController {
         return ResponseEntity.noContent().build();
     }
 }
-

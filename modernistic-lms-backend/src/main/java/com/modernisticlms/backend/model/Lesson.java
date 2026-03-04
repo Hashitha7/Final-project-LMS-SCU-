@@ -36,6 +36,6 @@ public class Lesson {
 
     @ManyToOne
     @JoinColumn(name = "teacher_id")
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({ "password" })
     private Teacher teacher;
 }
-

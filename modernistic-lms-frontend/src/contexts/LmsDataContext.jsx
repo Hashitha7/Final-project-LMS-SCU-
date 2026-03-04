@@ -84,10 +84,24 @@ export const LmsDataProvider = ({ children }) => {
         upsertUser: async (user) => { await api.users.create(user); refreshUsers(); },
         deleteUser: async (id, role) => { await api.users.delete(id, role); refreshUsers(); },
 
-        upsertCourse: async (course) => { await api.courses.create(course); refreshCourses(); },
+        upsertCourse: async (course) => {
+            if (course.id) {
+                await api.courses.update(course.id, course);
+            } else {
+                await api.courses.create(course);
+            }
+            refreshCourses();
+        },
         deleteCourse: async (id) => { await api.courses.delete(id); refreshCourses(); },
 
-        upsertLesson: async (lesson) => { await api.lessons.create(lesson); refreshLessons(); },
+        upsertLesson: async (lesson) => {
+            if (lesson.id) {
+                await api.lessons.update(lesson.id, lesson);
+            } else {
+                await api.lessons.create(lesson);
+            }
+            refreshLessons();
+        },
         deleteLesson: async (id) => { await api.lessons.delete(id); refreshLessons(); },
 
         upsertClass: async (cls) => { await api.classes.create(cls); refreshClasses(); },

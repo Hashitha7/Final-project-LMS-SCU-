@@ -41,12 +41,15 @@ public class CourseController {
             course.setName(updated.getName());
             course.setDescription(updated.getDescription());
             course.setImageUrl(updated.getImageUrl());
+            course.setVideoUrl(updated.getVideoUrl());
+            course.setVideoSize(updated.getVideoSize());
             course.setTotalFee(updated.getTotalFee());
             course.setNoOfInstallments(updated.getNoOfInstallments());
             course.setNoOfSemesters(updated.getNoOfSemesters());
             course.setStatus(updated.getStatus());
             course.setStartDate(updated.getStartDate());
             course.setEndDate(updated.getEndDate());
+            course.setCurrentTeacherId(updated.getCurrentTeacherId());
             course.setUpdated(LocalDateTime.now());
             return ResponseEntity.ok(courseRepository.save(course));
         }).orElse(ResponseEntity.notFound().build());
@@ -58,4 +61,3 @@ public class CourseController {
         return ResponseEntity.noContent().build();
     }
 }
-

@@ -157,6 +157,19 @@ export const submissions = {
   create: () => Promise.resolve({}),
 };
 
+// ── File Uploads (S3) ─────────────────────────────────────
+export const files = {
+  upload: (file, folder = 'general') => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('folder', folder);
+    return api.post('/files/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then(r => r.data);
+  },
+  delete: (url) => api.delete('/files/delete', { params: { url } }).then(r => r.data),
+};
+
 // ── Auth ──────────────────────────────────────────────────
 export const auth = {
   login: (credentials) => api.post('/auth/login', credentials).then(r => r.data),
