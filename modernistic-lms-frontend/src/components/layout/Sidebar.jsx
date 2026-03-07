@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, BookOpen, Users, GraduationCap, ClipboardList, Calendar, CreditCard, Video, BarChart3, Settings, LogOut, ChevronLeft, ChevronRight, Shield, Menu, X, UserCog, Layers, Bell, MessageSquare, Landmark, Plug, ChevronDown, Plus, Eye } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Users, GraduationCap, ClipboardList, Calendar, CreditCard, Video, BarChart3, Settings, LogOut, ChevronLeft, ChevronRight, Shield, Menu, X, UserCog, Layers, Bell, MessageSquare, Landmark, Plug, ChevronDown, Plus, Eye, Brain } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const adminMenuItems = [
@@ -60,6 +60,7 @@ const adminMenuItems = [
   },
   { label: 'Reports', icon: BarChart3, path: '/app/reports' },
   { label: 'Integrations', icon: Plug, path: '/app/integrations' },
+  { label: 'Science AI Analyst', icon: Brain, path: '/app/science-analyst' },
   { label: 'Settings', icon: Settings, path: '/app/settings' },
 ];
 
@@ -77,6 +78,7 @@ const menuItems = {
     { label: 'Zoom Classes', icon: Video, path: '/app/zoom' },
     { label: 'Notifications', icon: Bell, path: '/app/notifications' },
     { label: 'Reports', icon: BarChart3, path: '/app/reports' },
+    { label: 'Science AI Analyst', icon: Brain, path: '/app/science-analyst' },
     { label: 'Settings', icon: Settings, path: '/app/settings' },
   ],
   student: [
@@ -88,6 +90,7 @@ const menuItems = {
     { label: 'Zoom Classes', icon: Video, path: '/app/zoom' },
     { label: 'Notifications', icon: Bell, path: '/app/notifications' },
     { label: 'Payments', icon: CreditCard, path: '/app/payments' },
+    { label: 'Science AI Analyst', icon: Brain, path: '/app/science-analyst' },
     { label: 'Settings', icon: Settings, path: '/app/settings' },
   ],
 };

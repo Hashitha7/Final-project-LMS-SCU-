@@ -36,6 +36,8 @@ import Teachers from './pages/Teachers';
 import TeacherClasses from './pages/TeacherClasses';
 import SettingsPage from './pages/Settings';
 import NotFound from './pages/NotFound';
+import ScienceAnalyst from './pages/ScienceAnalyst';
+import ScienceResults from './pages/ScienceResults';
 const queryClient = new QueryClient();
 const App = () => (<ErrorBoundary>
   <QueryClientProvider client={queryClient}>
@@ -86,6 +88,8 @@ const App = () => (<ErrorBoundary>
                   <Route path="/app/teachers" element={<Teachers />} />
                   <Route path="/app/teachers/:teacherId/classes" element={<TeacherClasses />} />
                   <Route path="/app/settings" element={<SettingsPage />} />
+                  <Route path="/app/science-analyst" element={<ScienceAnalyst />} />
+                  <Route path="/app/science-analyst/results/:answerId" element={<ScienceResults />} />
 
                   {/* Legacy path redirects (optional) */}
                   <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />

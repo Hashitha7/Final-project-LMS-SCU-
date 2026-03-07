@@ -1,0 +1,288 @@
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { AppLayout } from '@/components/layout/AppLayout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Brain, ArrowLeft, CheckCircle2, XCircle, FileText, BarChart3, Loader2, Star, Microscope, Atom, Zap } from 'lucide-react';
+import api from '@/lib/api';
+
+const ScoreCircle = ({ score, size = 160 }) => {
+    const radius = (size - 20) / 2;
+    const circumference = 2 * Math.PI * radius;
+    const offset = circumference - (score / 100) * circumference;
+    const color = score >= 80 ? '#10b981' : score >= 60 ? '#3b82f6' : score >= 40 ? '#f59e0b' : '#ef4444';
+
+    return (
+        <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+            <svg width={size} height={size} className="-rotate-90">
+                <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="currentColor" strokeWidth="8" className="text-muted/20" />
+                <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={color} strokeWidth="8"
+                    strokeDasharray={circumference} strokeDashoffset={offset}
+                    strokeLinecap="round" className="transition-all duration-1000 ease-out" />
+            </svg>
+            <div className="absolute flex flex-col items-center">
+                <span className="text-4xl font-bold" style={{ color }}>{score?.toFixed(1)}</span>
+                <span className="text-sm text-muted-foreground">out of 100</span>
+            </div>
+        </div>
+    );
+};
+
+const ScienceResults = () => {
+    const { answerId } = useParams();
+    const navigate = useNavigate();
+    const location = useLocation();
+    const [result, setResult] = useState(location.state?.result || null);
+    const [loading, setLoading] = useState(!result);
+
+    useEffect(() => {
+        if (!result && answerId && answerId !== 'latest') {
+            setLoading(true);
+            api.get(`/science-analyst/results/${answerId}`)
+                .then(r => {
+                    const data = r.data;
+                    // Convert DB format to display format
+                    setResult({
+                        success: true,
+                        score: data.score,
+                        grade: data.gradeLabel,
+                        similarity_score: data.similarityScore,
+                        keyword_coverage: data.keywordCoverage,
+                        matched_keywords: data.matchedKeywords ? data.matchedKeywords.split(', ').filter(Boolean) : [],
+                        missed_keywords: data.missedKeywords ? data.missedKeywords.split(', ').filter(Boolean) : [],
+                        total_keywords: data.totalKeywords,
+                        matched_count: data.matchedCount,
+                        missed_count: data.missedCount,
+                        feedback: data.feedback,
+                        question_topic: data.questionTopic,
+                        question_subject: data.subject,
+                        question_grade: data.grade,
+                        student_answer_preview: data.extractedText,
+                        word_count: data.wordCount,
+                        extraction_info: {
+                            file_name: data.fileName,
+                            word_count: data.wordCount
+                        },
+                        student_name: data.studentName,
+                        analyzed_at: data.analyzedAt
+                    });
+                })
+                .catch(err => {
+                    console.error('Failed to load result:', err);
+                    setResult(null);
+                })
+                .finally(() => setLoading(false));
+        }
+    }, [answerId, result]);
+
+    if (loading) {
+        return (
+            <AppLayout>
+                <div className="flex items-center justify-center py-24">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                </div>
+            </AppLayout>
+        );
+    }
+
+    if (!result) {
+        return (
+            <AppLayout>
+                <div className="text-center py-24">
+                    <Brain className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-30" />
+                    <h2 className="text-xl font-bold text-foreground mb-2">Result Not Found</h2>
+                    <p className="text-muted-foreground mb-4">The analysis result could not be found.</p>
+                    <Button onClick={() => navigate('/app/science-analyst')}>
+                        <ArrowLeft className="w-4 h-4 mr-2" /> Back to Analyst
+                    </Button>
+                </div>
+            </AppLayout>
+        );
+    }
+
+    const subjectIcon = {
+        'Biology': <Microscope className="w-5 h-5" />,
+        'Chemistry': <Atom className="w-5 h-5" />,
+        'Physics': <Zap className="w-5 h-5" />,
+    };
+
+    const gradeColor = {
+        'Excellent': 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30',
+        'Good': 'bg-blue-500/10 text-blue-500 border-blue-500/30',
+        'Fair': 'bg-amber-500/10 text-amber-500 border-amber-500/30',
+        'Needs Improvement': 'bg-red-500/10 text-red-500 border-red-500/30'
+    };
+
+    const gradeEmoji = {
+        'Excellent': '🌟',
+        'Good': '👍',
+        'Fair': '📝',
+        'Needs Improvement': '📚'
+    };
+
+    return (
+        <AppLayout>
+            <div className="space-y-6 pt-12 lg:pt-0 max-w-5xl">
+                {/* Back Button */}
+                <Button variant="ghost" size="sm" onClick={() => navigate('/app/science-analyst')} className="text-muted-foreground hover:text-foreground">
+                    <ArrowLeft className="w-4 h-4 mr-2" /> Back to Science AI Analyst
+                </Button>
+
+                {/* Header */}
+                <div className="mb-4">
+                    <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+                        <Brain className="w-7 h-7 text-primary" />
+                        Analysis Results
+                    </h1>
+                    <div className="flex items-center gap-3 mt-2 text-sm text-muted-foreground">
+                        {result.question_grade && <Badge variant="outline">Grade {result.question_grade}</Badge>}
+                        {result.question_subject && (
+                            <Badge variant="outline" className="flex items-center gap-1">
+                                {subjectIcon[result.question_subject]} {result.question_subject}
+                            </Badge>
+                        )}
+                        {result.question_topic && <Badge variant="outline">{result.question_topic}</Badge>}
+                        {result.student_name && <span>• Student: <strong>{result.student_name}</strong></span>}
+                    </div>
+                </div>
+
+                {/* Score + Grade Card */}
+                <Card className="glass-card overflow-hidden">
+                    <div className="bg-gradient-to-r from-primary/5 via-primary/10 to-transparent p-8">
+                        <div className="flex flex-col sm:flex-row items-center gap-8">
+                            {/* Score Circle */}
+                            <ScoreCircle score={result.score || 0} />
+
+                            {/* Grade & Details */}
+                            <div className="flex-1 text-center sm:text-left">
+                                <div className="flex items-center gap-3 justify-center sm:justify-start mb-3">
+                                    <span className="text-4xl">{gradeEmoji[result.grade] || '📝'}</span>
+                                    <Badge className={`text-lg px-4 py-1 ${gradeColor[result.grade] || gradeColor['Fair']}`}>
+                                        {result.grade}
+                                    </Badge>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4 mt-4">
+                                    <div className="bg-background/50 rounded-lg p-3 text-center">
+                                        <p className="text-2xl font-bold text-foreground">{result.similarity_score?.toFixed(1)}%</p>
+                                        <p className="text-xs text-muted-foreground">Content Similarity</p>
+                                    </div>
+                                    <div className="bg-background/50 rounded-lg p-3 text-center">
+                                        <p className="text-2xl font-bold text-foreground">{result.keyword_coverage?.toFixed(1)}%</p>
+                                        <p className="text-xs text-muted-foreground">Keyword Coverage</p>
+                                    </div>
+                                    <div className="bg-background/50 rounded-lg p-3 text-center">
+                                        <p className="text-2xl font-bold text-emerald-500">{result.matched_count || 0}</p>
+                                        <p className="text-xs text-muted-foreground">Keywords Matched</p>
+                                    </div>
+                                    <div className="bg-background/50 rounded-lg p-3 text-center">
+                                        <p className="text-2xl font-bold text-red-500">{result.missed_count || 0}</p>
+                                        <p className="text-xs text-muted-foreground">Keywords Missed</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </Card>
+
+                {/* Feedback */}
+                {result.feedback && (
+                    <Card className="glass-card">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-base">
+                                <Star className="w-5 h-5 text-amber-500" /> Feedback
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-foreground leading-relaxed">{result.feedback}</p>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Keywords Section */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Matched Keywords */}
+                    <Card className="glass-card">
+                        <CardHeader className="pb-3">
+                            <CardTitle className="flex items-center gap-2 text-base text-emerald-500">
+                                <CheckCircle2 className="w-5 h-5" /> Matched Keywords ({result.matched_keywords?.length || 0})
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {result.matched_keywords?.length > 0 ? (
+                                <div className="flex flex-wrap gap-2">
+                                    {result.matched_keywords.map((kw, i) => (
+                                        <Badge key={i} className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20">
+                                            ✅ {kw}
+                                        </Badge>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-sm text-muted-foreground">No keywords matched</p>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    {/* Missed Keywords */}
+                    <Card className="glass-card">
+                        <CardHeader className="pb-3">
+                            <CardTitle className="flex items-center gap-2 text-base text-red-500">
+                                <XCircle className="w-5 h-5" /> Missed Keywords ({result.missed_keywords?.length || 0})
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {result.missed_keywords?.length > 0 ? (
+                                <div className="flex flex-wrap gap-2">
+                                    {result.missed_keywords.map((kw, i) => (
+                                        <Badge key={i} className="bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20">
+                                            ❌ {kw}
+                                        </Badge>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-sm text-muted-foreground">All keywords covered! 🎉</p>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Extracted Answer Text */}
+                {result.student_answer_preview && (
+                    <Card className="glass-card">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-base">
+                                <FileText className="w-5 h-5" />
+                                Extracted Answer Text
+                                {result.word_count && <span className="text-sm font-normal text-muted-foreground">({result.word_count} words)</span>}
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="bg-muted/30 rounded-lg p-4 text-sm text-foreground leading-relaxed max-h-[400px] overflow-y-auto whitespace-pre-line">
+                                {result.student_answer_preview}
+                            </div>
+                            {result.extraction_info?.file_name && (
+                                <p className="text-xs text-muted-foreground mt-3">
+                                    📄 Source file: {result.extraction_info.file_name}
+                                </p>
+                            )}
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Action buttons */}
+                <div className="flex justify-between">
+                    <Button variant="outline" onClick={() => navigate('/app/science-analyst')}>
+                        <ArrowLeft className="w-4 h-4 mr-2" /> Back
+                    </Button>
+                    <Button className="gradient-primary text-primary-foreground" onClick={() => navigate('/app/science-analyst')}>
+                        <Brain className="w-4 h-4 mr-2" /> Analyze Another
+                    </Button>
+                </div>
+            </div>
+        </AppLayout>
+    );
+};
+
+export default ScienceResults;

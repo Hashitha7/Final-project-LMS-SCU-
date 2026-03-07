@@ -178,5 +178,24 @@ export const auth = {
   me: () => api.get('/users/me').then(r => r.data),
 };
 
+// ── Science AI Analyst ────────────────────────────────────
+export const scienceAnalyst = {
+  analyze: (formData) => api.post('/science-analyst/analyze', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }).then(r => r.data),
+  getResults: () => api.get('/science-analyst/results').then(r => r.data),
+  getResult: (id) => api.get(`/science-analyst/results/${id}`).then(r => r.data),
+  getTopics: (grade, subject) => {
+    let url = '/science-analyst/topics';
+    const params = [];
+    if (grade) params.push(`grade=${grade}`);
+    if (subject) params.push(`subject=${subject}`);
+    if (params.length) url += '?' + params.join('&');
+    return api.get(url).then(r => r.data);
+  },
+  health: () => api.get('/science-analyst/health').then(r => r.data),
+  deleteResult: (id) => api.delete(`/science-analyst/results/${id}`),
+};
+
 export default api;
 
