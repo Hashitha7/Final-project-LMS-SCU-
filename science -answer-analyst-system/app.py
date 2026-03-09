@@ -115,16 +115,113 @@ def upload_and_analyze():
         subject = request.form.get('subject')
         topic = request.form.get('topic')
         question_id = request.form.get('question_id')
+        # Step 3: Split and Analyze the answer(s)
+        import re
+        # Stricter pattern: Matches "Q1", "Question 1", "A1", "Answer 1" at the start of a line. 
+        # Prevents numbered lists (1., 2.) inside answers from being split into new questions.
+        pattern = r'(?im)^\s*(?:Q(?:uestion)?|A(?:nswer)?|Prashnaya)?\s*[\.\-:]?\s*\d+[\.\)\-:]?\s*'
         
-        # Step 3: Analyze the answer
+        # Check if the document has explicit question markers
+        has_markers = bool(re.search(r'(?im)^\s*(?:Q(?:uestion)?|A(?:nswer)?)\s*\d+', extracted_text))
+        
+        # If no explicit markers found, we'll try to use the old pattern as a fallback, 
+        # but it's risky for lists. Best is to encourage users to use Q1, Q2.
+        if not has_markers:
+            pattern = r'(?im)^\s*(?:Q(?:uestion)?\s*\d+|[0-9]+[\.\)])[\s:]*'
+
+        parts = re.split(pattern, extracted_text)
+        matches = list(re.finditer(pattern, extracted_text))
+        headers = [m.group(0).strip() for m in matches]
+        
         analyzer = get_analyzer()
-        analysis_result = analyzer.analyze_answer(
-            student_answer=extracted_text,
-            question_id=question_id,
-            grade=grade,
-            subject=subject,
-            topic=topic
-        )
+        answers = []
+        
+        if len(headers) == 0:
+            answers.append(('Answer', extracted_text))
+        else:
+            intro = parts[0].strip()
+            if len(intro) > 30: # Only if intro text is substantial
+                answers.append(('Intro', intro))
+            for i, header in enumerate(headers):
+                content = parts[i+1].strip()
+                if len(content) > 5:
+                    answers.append((header, content))
+        
+        valid_answers = 0
+        total_score = 0
+        total_sim = 0
+        total_kw = 0
+        all_matched = []
+        all_missed = []
+        combined_feedback = ""
+        
+        num_questions = len(answers)
+        
+        for header, content in answers:
+            # KEY FIX: For multi-question papers, each fragment independently
+            # finds its own best-matching question from the dataset.
+            # We only lock to question_id for a single-question upload,
+            # otherwise we let each fragment self-discover its topic.
+            if num_questions == 1:
+                # Single question — use the teacher-specified question_id/topic/subject
+                res = analyzer.analyze_answer(content, question_id, grade, subject, topic)
+            else:
+                # Multi-question / mixed paper — pass subject=None so the AI
+                # auto-detects the correct subject for EACH question independently
+                # across Biology, Chemistry, AND Physics in the dataset.
+                res = analyzer.analyze_answer(content, None, grade, None, None)
+            
+            if not res.get('success', False) and "short" in res.get('error', ''):
+                continue
+            
+            valid_answers += 1
+            score = res.get('score', 0)
+            total_score += score
+            total_sim += res.get('similarity_score', 0)
+            total_kw += res.get('keyword_coverage', 0)
+            
+            prefix = "" if header in ["Answer", "Intro"] else f"{header} "
+            matched_topic = res.get('question_topic', '')
+            topic_label = f" [{matched_topic}]" if matched_topic and num_questions > 1 else ""
+            
+            for kw in res.get('matched_keywords', []):
+                all_matched.append(f"{prefix}{kw}")
+            for kw in res.get('missed_keywords', []):
+                all_missed.append(f"{prefix}{kw}")
+            
+            # Include the auto-detected topic in feedback for transparency
+            combined_feedback += f"\n\n### {header}{topic_label} (Score: {score}%)\n{res.get('feedback', '')}"
+        
+        if valid_answers == 0:
+            # Fallback if splitting somehow failed to yield valid content
+            analysis_result = analyzer.analyze_answer(extracted_text, question_id, grade, subject, topic)
+        else:
+            avg_score = round(total_score / valid_answers, 1)
+            
+            if avg_score >= 80: grade_label = "Excellent"
+            elif avg_score >= 60: grade_label = "Good"
+            elif avg_score >= 40: grade_label = "Fair"
+            else: grade_label = "Needs Improvement"
+            
+            # Remove duplicates but preserve order and casing
+            unique_matched = list(dict.fromkeys(all_matched))
+            unique_missed = list(dict.fromkeys(all_missed))
+            
+            analysis_result = {
+                "success": True,
+                "score": avg_score,
+                "grade": grade_label,
+                "similarity_score": round(total_sim / valid_answers, 1),
+                "keyword_coverage": round(total_kw / valid_answers, 1),
+                "matched_keywords": unique_matched,
+                "missed_keywords": unique_missed,
+                "total_keywords": len(unique_matched) + len(unique_missed),
+                "matched_count": len(unique_matched),
+                "missed_count": len(unique_missed),
+                "feedback": f"📊 **Paper Analysis ({valid_answers} questions analyzed)**\n" + combined_feedback.strip(),
+                "question_topic": topic or "Multi-Question Paper",
+                "word_count": len(extracted_text.split())
+            }
         
         # Add extraction info to result
         analysis_result['extracted_text'] = extracted_text

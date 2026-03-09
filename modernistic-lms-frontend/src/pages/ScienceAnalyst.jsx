@@ -90,10 +90,7 @@ const ScienceAnalyst = () => {
             toast.error('Please select a grade');
             return;
         }
-        if (!subject) {
-            toast.error('Please select a subject');
-            return;
-        }
+        // Subject is optional — if not selected, AI auto-detects per question
 
         setIsAnalyzing(true);
 
@@ -101,7 +98,7 @@ const ScienceAnalyst = () => {
             const formData = new FormData();
             formData.append('file', file);
             formData.append('grade', grade);
-            formData.append('subject', subject);
+            if (subject && subject !== 'mixed') formData.append('subject', subject);  // omit for mixed papers
             if (topic) formData.append('topic', topic);
             formData.append('student_name', studentName || 'Unknown Student');
             formData.append('teacher_name', user?.name || 'Unknown Teacher');
@@ -132,7 +129,7 @@ const ScienceAnalyst = () => {
         }
     };
 
-    const canAnalyze = user?.role === 'admin' || user?.role === 'teacher';
+    const canAnalyze = user?.role === 'admin' || user?.role === 'teacher' || user?.role === 'institute';
 
     const gradeColor = (g) => {
         switch (g) {
@@ -229,10 +226,13 @@ const ScienceAnalyst = () => {
                                     </Select>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>Subject *</Label>
+                                    <Label>Subject <span className="text-muted-foreground text-xs">(Optional for mixed papers)</span></Label>
                                     <Select value={subject} onValueChange={setSubject}>
-                                        <SelectTrigger><SelectValue placeholder="Select Subject" /></SelectTrigger>
+                                        <SelectTrigger><SelectValue placeholder="Select Subject (Optional)" /></SelectTrigger>
                                         <SelectContent>
+                                            <SelectItem value="mixed">
+                                                <span className="flex items-center gap-2">🔬 Mixed Paper (All Subjects)</span>
+                                            </SelectItem>
                                             <SelectItem value="Biology">
                                                 <span className="flex items-center gap-2"><Microscope className="w-4 h-4" /> Biology</span>
                                             </SelectItem>
@@ -258,10 +258,10 @@ const ScienceAnalyst = () => {
                             {/* File Upload Zone */}
                             <div
                                 className={`border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer ${dragActive
-                                        ? 'border-primary bg-primary/5 scale-[1.01]'
-                                        : file
-                                            ? 'border-emerald-500 bg-emerald-500/5'
-                                            : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/30'
+                                    ? 'border-primary bg-primary/5 scale-[1.01]'
+                                    : file
+                                        ? 'border-emerald-500 bg-emerald-500/5'
+                                        : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/30'
                                     }`}
                                 onDragEnter={handleDrag}
                                 onDragLeave={handleDrag}

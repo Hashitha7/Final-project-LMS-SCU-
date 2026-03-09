@@ -196,7 +196,7 @@ const ScienceResults = () => {
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-foreground leading-relaxed">{result.feedback}</p>
+                            <p className="text-foreground leading-relaxed whitespace-pre-line">{result.feedback}</p>
                         </CardContent>
                     </Card>
                 )}

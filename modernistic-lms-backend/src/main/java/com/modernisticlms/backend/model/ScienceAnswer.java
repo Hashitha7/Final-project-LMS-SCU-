@@ -31,7 +31,7 @@ public class ScienceAnswer {
 
     private String fileType;
 
-    @Column(length = 10000)
+    @Column(columnDefinition = "TEXT")
     private String extractedText;
 
     private Double score;
@@ -42,10 +42,10 @@ public class ScienceAnswer {
 
     private Double keywordCoverage;
 
-    @Column(length = 5000)
+    @Column(columnDefinition = "TEXT")
     private String matchedKeywords;
 
-    @Column(length = 5000)
+    @Column(columnDefinition = "TEXT")
     private String missedKeywords;
 
     private Integer totalKeywords;
@@ -54,7 +54,7 @@ public class ScienceAnswer {
 
     private Integer missedCount;
 
-    @Column(length = 5000)
+    @Column(columnDefinition = "TEXT")
     private String feedback;
 
     private String questionTopic;
