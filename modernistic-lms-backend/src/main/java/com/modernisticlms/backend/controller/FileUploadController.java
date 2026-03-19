@@ -5,6 +5,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.util.Map;
 
@@ -42,6 +44,12 @@ public class FileUploadController {
                     "fileName", file.getOriginalFilename(),
                     "size", file.getSize(),
                     "contentType", file.getContentType()));
+        } catch (SdkClientException e) {
+            return ResponseEntity.status(503).body(Map.of(
+                    "message", "Upload failed: AWS credentials are not configured. Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY, then restart backend."));
+        } catch (S3Exception e) {
+            return ResponseEntity.status(e.statusCode() > 0 ? e.statusCode() : 502).body(Map.of(
+                    "message", "Upload failed: " + e.awsErrorDetails().errorMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("message", "Upload failed: " + e.getMessage()));
         }

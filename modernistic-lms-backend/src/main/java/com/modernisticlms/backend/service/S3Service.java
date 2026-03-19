@@ -4,6 +4,7 @@ import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -33,11 +34,31 @@ public class S3Service {
 
     @PostConstruct
     public void init() {
-        AwsBasicCredentials credentials = AwsBasicCredentials.create(accessKeyId, secretAccessKey);
-        this.s3Client = S3Client.builder()
-                .region(Region.of(region))
-                .credentialsProvider(StaticCredentialsProvider.create(credentials))
-                .build();
+        var builder = S3Client.builder().region(Region.of(region));
+
+        boolean hasExplicitKeys = !isBlank(accessKeyId) && !isBlank(secretAccessKey);
+        if (hasExplicitKeys) {
+            if (isPlaceholder(accessKeyId) || isPlaceholder(secretAccessKey)) {
+                throw new IllegalStateException("Invalid AWS S3 credentials configuration: placeholder values detected. Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY or remove placeholders.");
+            }
+
+            AwsBasicCredentials credentials = AwsBasicCredentials.create(accessKeyId.trim(), secretAccessKey.trim());
+            builder.credentialsProvider(StaticCredentialsProvider.create(credentials));
+        } else {
+            // Fall back to AWS SDK default chain (env vars, shared config, IAM role, etc.)
+            builder.credentialsProvider(DefaultCredentialsProvider.create());
+        }
+
+        this.s3Client = builder.build();
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
+    }
+
+    private boolean isPlaceholder(String value) {
+        String normalized = value == null ? "" : value.trim().toUpperCase();
+        return normalized.startsWith("YOUR_");
     }
 
     /**
