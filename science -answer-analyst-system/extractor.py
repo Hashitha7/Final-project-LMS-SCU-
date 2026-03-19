@@ -18,7 +18,13 @@ except ImportError:
 try:
     import pytesseract
     from PIL import Image
-    OCR_SUPPORT = True
+    # Test if Tesseract binary is actually installed (not just the Python library)
+    try:
+        pytesseract.get_tesseract_version()
+        OCR_SUPPORT = True
+    except pytesseract.TesseractNotFoundError:
+        OCR_SUPPORT = False
+        print("⚠️ Tesseract binary not found. Image OCR disabled. Install from: https://github.com/UB-Mannheim/tesseract/wiki")
 except ImportError:
     OCR_SUPPORT = False
     print("⚠️ pytesseract/Pillow not installed. Image OCR disabled.")
@@ -70,11 +76,14 @@ def extract_from_pdf(file_path):
 def extract_from_image(file_path):
     """Extract text from a PNG/JPG image using Tesseract OCR"""
     if not OCR_SUPPORT:
-        return {"success": False, "error": "pytesseract/Pillow not installed", "text": ""}
+        return {
+            "success": False,
+            "error": "Image upload requires Tesseract OCR which is not installed on this server. Please upload a PDF file instead.",
+            "text": ""
+        }
     
     try:
         image = Image.open(file_path)
-        # Use Tesseract OCR to extract text
         text = pytesseract.image_to_string(image, lang='eng')
         cleaned = clean_text(text)
         
@@ -82,6 +91,12 @@ def extract_from_image(file_path):
             "success": True,
             "text": cleaned,
             "word_count": len(cleaned.split())
+        }
+    except pytesseract.TesseractNotFoundError:
+        return {
+            "success": False,
+            "error": "Tesseract OCR is not installed. Please upload a PDF file instead.",
+            "text": ""
         }
     except Exception as e:
         return {"success": False, "error": str(e), "text": ""}

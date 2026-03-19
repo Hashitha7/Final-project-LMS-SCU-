@@ -8,17 +8,32 @@ Endpoints:
 
 import os
 import uuid
+import re
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from extractor import extract_text
 from analyzer import get_analyzer
 
 app = Flask(__name__)
-CORS(app)  # Allow cross-origin requests from React frontend
+CORS(app)
 
 # Upload directory
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+# ── Validation constants ───────────────────────────────────────────────────────
+ALLOWED_EXT      = {'.pdf'}          # Only PDF (no Tesseract installed)
+MAX_FILE_SIZE_MB = 10                # Max file size in MB
+MIN_WORD_COUNT   = 15                # Min words required after extraction
+
+
+def is_english_enough(text, threshold=0.70):
+    """Return True if >= threshold fraction of words are ASCII-English."""
+    words = text.split()
+    if not words:
+        return False
+    ascii_words = sum(1 for w in words if all(ord(c) < 128 for c in w))
+    return (ascii_words / len(words)) >= threshold
 
 
 @app.route('/api/health', methods=['GET'])
@@ -68,21 +83,26 @@ def upload_and_analyze():
         }), 400
     
     file = request.files['file']
-    
+
     if file.filename == '':
-        return jsonify({
-            "success": False,
-            "error": "No file selected."
-        }), 400
-    
-    # Validate file type
-    allowed_extensions = {'.pdf', '.png', '.jpg', '.jpeg'}
+        return jsonify({"success": False, "error": "No file selected."}), 400
+
+    # ── Validation 1: File type ────────────────────────────────────────────────
     ext = os.path.splitext(file.filename)[1].lower()
-    
-    if ext not in allowed_extensions:
+    if ext not in ALLOWED_EXT:
         return jsonify({
             "success": False,
-            "error": f"Unsupported file type: {ext}. Please upload PDF, PNG, or JPG."
+            "error": f"Invalid file type '{ext}'. Only PDF files are accepted. Please convert your answer sheet to PDF and try again."
+        }), 400
+
+    # ── Validation 2: File size ────────────────────────────────────────────────
+    file.seek(0, 2)          # Seek to end
+    file_size_mb = file.tell() / (1024 * 1024)
+    file.seek(0)             # Reset
+    if file_size_mb > MAX_FILE_SIZE_MB:
+        return jsonify({
+            "success": False,
+            "error": f"File too large ({file_size_mb:.1f} MB). Maximum allowed size is {MAX_FILE_SIZE_MB} MB."
         }), 400
     
     # Save file temporarily
@@ -97,17 +117,25 @@ def upload_and_analyze():
         if not extraction_result['success']:
             return jsonify({
                 "success": False,
-                "error": f"Failed to extract text: {extraction_result.get('error', 'Unknown error')}",
+                "error": f"Text extraction failed: {extraction_result.get('error', 'Unknown error')}. Please ensure the PDF contains typed (not handwritten) text.",
                 "extraction": extraction_result
             }), 422
-        
+
         extracted_text = extraction_result['text']
-        
-        if not extracted_text or len(extracted_text.strip()) < 10:
+        word_count = len(extracted_text.split())
+
+        # ── Validation 3: Minimum word count ──────────────────────────────────
+        if not extracted_text or word_count < MIN_WORD_COUNT:
             return jsonify({
                 "success": False,
-                "error": "Could not extract enough text from the file. Please upload a clearer image or PDF.",
-                "extraction": extraction_result
+                "error": f"The extracted text is too short ({word_count} words). Please write a more detailed answer with at least {MIN_WORD_COUNT} words, then try again."
+            }), 422
+
+        # ── Validation 4: English language check ──────────────────────────────
+        if not is_english_enough(extracted_text):
+            return jsonify({
+                "success": False,
+                "error": "The answer appears to contain non-English text. This system only evaluates English language answers. Please write your answer in English."
             }), 422
         
         # Step 2: Get analysis parameters

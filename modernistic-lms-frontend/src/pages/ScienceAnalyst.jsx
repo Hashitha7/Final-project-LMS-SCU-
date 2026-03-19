@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/components/ui/sonner';
-import { Brain, Upload, FileText, CheckCircle2, XCircle, BarChart3, Loader2, Microscope, Atom, Zap } from 'lucide-react';
+import { Brain, Upload, FileText, CheckCircle2, XCircle, BarChart3, Loader2, Microscope, Atom, Zap, Eye, Trash2 } from 'lucide-react';
 import api from '@/lib/api';
 
 const ScienceAnalyst = () => {
@@ -22,9 +22,10 @@ const ScienceAnalyst = () => {
     const [dragActive, setDragActive] = useState(false);
     const [grade, setGrade] = useState('');
     const [subject, setSubject] = useState('');
-    const [topic, setTopic] = useState('');
     const [studentName, setStudentName] = useState('');
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [errors, setErrors] = useState({});        // field-level validation errors
+    const [submitAttempted, setSubmitAttempted] = useState(false);
 
     // Results state
     const [results, setResults] = useState([]);
@@ -46,6 +47,18 @@ const ScienceAnalyst = () => {
             .then(r => setResults(r.data))
             .catch(err => console.error('Failed to load results:', err))
             .finally(() => setLoadingResults(false));
+    };
+
+    const handleDelete = async (e, id) => {
+        e.stopPropagation();
+        if (!window.confirm('Are you sure you want to delete this analysis result? This cannot be undone.')) return;
+        try {
+            await api.delete(`/science-analyst/results/${id}`);
+            setResults(prev => prev.filter(r => r.id !== id));
+            toast.success('Analysis result deleted.');
+        } catch (err) {
+            toast.error('Failed to delete. Please try again.');
+        }
     };
 
     // Stats
@@ -76,22 +89,38 @@ const ScienceAnalyst = () => {
 
     const handleFileChange = (e) => {
         if (e.target.files && e.target.files[0]) {
-            setFile(e.target.files[0]);
+            const selected = e.target.files[0];
+            // Client-side file size check (max 10 MB)
+            if (selected.size > 10 * 1024 * 1024) {
+                toast.error('File too large. Maximum size is 10 MB.');
+                e.target.value = '';
+                return;
+            }
+            setFile(selected);
+            setErrors(prev => ({ ...prev, file: undefined }));
         }
+    };
+
+    // Validate all required fields — returns error object
+    const validateForm = () => {
+        const errs = {};
+        if (!file)          errs.file    = 'Please select a PDF file to upload.';
+        if (!grade)         errs.grade   = 'Grade is required.';
+        if (!subject)       errs.subject = 'Subject is required.';
+        if (!studentName.trim()) errs.studentName = 'Student name is required.';
+        return errs;
     };
 
     // Submit for analysis
     const handleAnalyze = async () => {
-        if (!file) {
-            toast.error('Please upload a PDF or PNG file');
+        setSubmitAttempted(true);
+        const errs = validateForm();
+        if (Object.keys(errs).length > 0) {
+            setErrors(errs);
+            toast.error('Please fix the errors before submitting.');
             return;
         }
-        if (!grade) {
-            toast.error('Please select a grade');
-            return;
-        }
-        // Subject is optional — if not selected, AI auto-detects per question
-
+        setErrors({});
         setIsAnalyzing(true);
 
         try {
@@ -99,7 +128,6 @@ const ScienceAnalyst = () => {
             formData.append('file', file);
             formData.append('grade', grade);
             if (subject && subject !== 'mixed') formData.append('subject', subject);  // omit for mixed papers
-            if (topic) formData.append('topic', topic);
             formData.append('student_name', studentName || 'Unknown Student');
             formData.append('teacher_name', user?.name || 'Unknown Teacher');
 
@@ -213,22 +241,27 @@ const ScienceAnalyst = () => {
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-6">
-                            {/* Grade, Subject, Topic selectors */}
-                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                            {/* Grade, Subject selectors */}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <div className="space-y-2">
-                                    <Label>Grade *</Label>
-                                    <Select value={grade} onValueChange={setGrade}>
-                                        <SelectTrigger><SelectValue placeholder="Select Grade" /></SelectTrigger>
+                                    <Label>Grade <span className="text-red-500">*</span></Label>
+                                    <Select value={grade} onValueChange={v => { setGrade(v); setErrors(p => ({...p, grade: undefined})); }}>
+                                        <SelectTrigger className={errors.grade ? 'border-red-500' : ''}>
+                                            <SelectValue placeholder="Select Grade" />
+                                        </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="10">Grade 10</SelectItem>
                                             <SelectItem value="11">Grade 11</SelectItem>
                                         </SelectContent>
                                     </Select>
+                                    {errors.grade && <p className="text-xs text-red-500">{errors.grade}</p>}
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>Subject <span className="text-muted-foreground text-xs">(Optional for mixed papers)</span></Label>
-                                    <Select value={subject} onValueChange={setSubject}>
-                                        <SelectTrigger><SelectValue placeholder="Select Subject (Optional)" /></SelectTrigger>
+                                    <Label>Subject <span className="text-red-500">*</span></Label>
+                                    <Select value={subject} onValueChange={v => { setSubject(v); setErrors(p => ({...p, subject: undefined})); }}>
+                                        <SelectTrigger className={errors.subject ? 'border-red-500' : ''}>
+                                            <SelectValue placeholder="Select Subject" />
+                                        </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="mixed">
                                                 <span className="flex items-center gap-2">🔬 Mixed Paper (All Subjects)</span>
@@ -244,14 +277,17 @@ const ScienceAnalyst = () => {
                                             </SelectItem>
                                         </SelectContent>
                                     </Select>
+                                    {errors.subject && <p className="text-xs text-red-500">{errors.subject}</p>}
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>Topic (Optional)</Label>
-                                    <Input placeholder="e.g. Photosynthesis" value={topic} onChange={e => setTopic(e.target.value)} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Student Name</Label>
-                                    <Input placeholder="Student name" value={studentName} onChange={e => setStudentName(e.target.value)} />
+                                    <Label>Student Name <span className="text-red-500">*</span></Label>
+                                    <Input
+                                        placeholder="Student name"
+                                        value={studentName}
+                                        onChange={e => { setStudentName(e.target.value); setErrors(p => ({...p, studentName: undefined})); }}
+                                        className={errors.studentName ? 'border-red-500' : ''}
+                                    />
+                                    {errors.studentName && <p className="text-xs text-red-500">{errors.studentName}</p>}
                                 </div>
                             </div>
 
@@ -272,7 +308,7 @@ const ScienceAnalyst = () => {
                                 <input
                                     id="file-upload-input"
                                     type="file"
-                                    accept=".pdf,.png,.jpg,.jpeg"
+                                    accept=".pdf"
                                     onChange={handleFileChange}
                                     className="hidden"
                                 />
@@ -294,18 +330,30 @@ const ScienceAnalyst = () => {
                                         </div>
                                         <h3 className="text-lg font-medium text-foreground">Upload Answer Sheet</h3>
                                         <p className="text-sm text-muted-foreground max-w-xs">
-                                            Drag & drop a PDF or PNG file here, or click to browse.
+                                            Drag &amp; drop a <strong>PDF file</strong> here, or click to browse.
                                         </p>
-                                        <p className="text-xs text-muted-foreground">Supported: PDF, PNG, JPG</p>
+                                        <p className="text-xs text-muted-foreground">Supported: PDF only (typed/digital answers)</p>
                                     </div>
                                 )}
                             </div>
 
-                            {/* Analyze Button */}
-                            <div className="flex justify-end">
+                                {errors.file && (
+                                    <p className="text-xs text-red-500 mt-1">{errors.file}</p>
+                                )}
+
+                            {/* Validation summary + Analyze Button */}
+                            <div className="flex items-center justify-between gap-4">
+                                {submitAttempted && Object.keys(errors).length > 0 ? (
+                                    <div className="flex items-center gap-2 text-sm text-red-500 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">
+                                        <XCircle className="w-4 h-4 flex-shrink-0" />
+                                        <span>Please fix {Object.keys(errors).length} error(s) before submitting.</span>
+                                    </div>
+                                ) : (
+                                    <span />
+                                )}
                                 <Button
                                     onClick={handleAnalyze}
-                                    disabled={!file || !grade || !subject || isAnalyzing}
+                                    disabled={isAnalyzing}
                                     className="gradient-primary text-primary-foreground px-8 py-2.5"
                                     size="lg"
                                 >
@@ -346,7 +394,6 @@ const ScienceAnalyst = () => {
                                         <TableHead>Student</TableHead>
                                         <TableHead>Grade</TableHead>
                                         <TableHead>Subject</TableHead>
-                                        <TableHead>Topic</TableHead>
                                         <TableHead>Score</TableHead>
                                         <TableHead>Grade</TableHead>
                                         <TableHead>Keywords</TableHead>
@@ -360,7 +407,6 @@ const ScienceAnalyst = () => {
                                             <TableCell className="font-medium text-foreground">{r.studentName || '—'}</TableCell>
                                             <TableCell><Badge variant="outline">{r.grade || '—'}</Badge></TableCell>
                                             <TableCell className="text-muted-foreground">{r.subject || '—'}</TableCell>
-                                            <TableCell className="text-muted-foreground max-w-[150px] truncate">{r.questionTopic || r.topic || '—'}</TableCell>
                                             <TableCell>
                                                 <span className="font-bold text-foreground">{r.score?.toFixed(1)}%</span>
                                             </TableCell>
@@ -376,9 +422,26 @@ const ScienceAnalyst = () => {
                                                 {r.analyzedAt ? new Date(r.analyzedAt).toLocaleDateString() : '—'}
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); navigate(`/app/science-analyst/results/${r.id}`); }}>
-                                                    View
-                                                </Button>
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <Button
+                                                        size="icon"
+                                                        variant="outline"
+                                                        title="View Result"
+                                                        onClick={(e) => { e.stopPropagation(); navigate(`/app/science-analyst/results/${r.id}`); }}
+                                                        className="h-8 w-8 hover:bg-primary/10 hover:text-primary hover:border-primary/30"
+                                                    >
+                                                        <Eye className="w-4 h-4" />
+                                                    </Button>
+                                                    <Button
+                                                        size="icon"
+                                                        variant="outline"
+                                                        title="Delete Result"
+                                                        onClick={(e) => handleDelete(e, r.id)}
+                                                        className="h-8 w-8 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/30"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </Button>
+                                                </div>
                                             </TableCell>
                                         </TableRow>
                                     ))}
