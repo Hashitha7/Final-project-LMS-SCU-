@@ -308,7 +308,7 @@ const ScienceAnalyst = () => {
                                 <input
                                     id="file-upload-input"
                                     type="file"
-                                    accept=".pdf"
+                                    accept=".pdf,.png,.jpg,.jpeg"
                                     onChange={handleFileChange}
                                     className="hidden"
                                 />
@@ -330,9 +330,9 @@ const ScienceAnalyst = () => {
                                         </div>
                                         <h3 className="text-lg font-medium text-foreground">Upload Answer Sheet</h3>
                                         <p className="text-sm text-muted-foreground max-w-xs">
-                                            Drag &amp; drop a <strong>PDF file</strong> here, or click to browse.
+                                            Drag & drop a <strong>PDF or Image</strong> file here, or click to browse.
                                         </p>
-                                        <p className="text-xs text-muted-foreground">Supported: PDF only (typed/digital answers)</p>
+                                        <p className="text-xs text-muted-foreground">Supported: PDF, PNG, JPG (typed or handwritten answers)</p>
                                     </div>
                                 )}
                             </div>

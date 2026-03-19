@@ -122,6 +122,65 @@ const ScienceResults = () => {
         'Needs Improvement': '📚'
     };
 
+    // Build per-question breakdown from either:
+    //   a) fresh analysis data (result.per_question array), OR
+    //   b) DB-stored result by parsing prefixed keywords + feedback text
+    const parsePerQuestion = () => {
+        // (a) Fresh result already has structured per_question
+        if (result.per_question && result.per_question.length > 1) {
+            return result.per_question;
+        }
+
+        // (b) Try to reconstruct from Q1./Q2. prefixed keywords
+        const matched = result.matched_keywords || [];
+        const missed  = result.missed_keywords  || [];
+
+        // Group keywords by their "Q1. keyword" → { Q1: [...], Q2: [...] }
+        const groupByQ = (arr) => {
+            const map = {};
+            arr.forEach(kw => {
+                const m = kw.match(/^(Q\d+)[.\s]+(.+)$/);
+                if (m) {
+                    const q = m[1];
+                    if (!map[q]) map[q] = [];
+                    map[q].push(m[2].trim());
+                }
+            });
+            return map;
+        };
+
+        const matchedByQ = groupByQ(matched);
+        const missedByQ  = groupByQ(missed);
+        const questions  = Object.keys({ ...matchedByQ, ...missedByQ }).sort();
+        if (questions.length < 2) return null;   // single question — use old view
+
+        // Parse per-question scores + feedback from the combined feedback string
+        // Format: "### Q1. [Topic] (Score: 46.9%)\nfeedback text..."
+        const feedbackMap = {};
+        if (result.feedback) {
+            const sectionRe = /###\s*(Q\d+)[^\n]*(?:\[([^\]]*)\])?\s*\(Score:\s*([\d.]+)%\)\s*([\s\S]*?)(?=\n###|\n\n###|$)/g;
+            let fm;
+            while ((fm = sectionRe.exec(result.feedback)) !== null) {
+                feedbackMap[fm[1]] = {
+                    topic:    fm[2] && fm[2] !== 'Unknown' ? fm[2] : '',
+                    score:    parseFloat(fm[3]),
+                    feedback: fm[4].trim(),
+                };
+            }
+        }
+
+        return questions.map(q => ({
+            question: q,
+            topic:    feedbackMap[q]?.topic    || '',
+            score:    feedbackMap[q]?.score    ?? 0,
+            feedback: feedbackMap[q]?.feedback || '',
+            matched_keywords: matchedByQ[q] || [],
+            missed_keywords:  missedByQ[q]  || [],
+        }));
+    };
+
+    const perQuestion = parsePerQuestion();
+
     return (
         <AppLayout>
             <div className="space-y-6 pt-12 lg:pt-0 max-w-5xl">
@@ -187,8 +246,8 @@ const ScienceResults = () => {
                     </div>
                 </Card>
 
-                {/* Feedback */}
-                {result.feedback && (
+                {/* Feedback — shown only for single question (multi-q feedback is embedded per card) */}
+                {result.feedback && !perQuestion && (
                     <Card className="glass-card">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-base">
@@ -201,52 +260,138 @@ const ScienceResults = () => {
                     </Card>
                 )}
 
-                {/* Keywords Section */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Matched Keywords */}
-                    <Card className="glass-card">
-                        <CardHeader className="pb-3">
-                            <CardTitle className="flex items-center gap-2 text-base text-emerald-500">
-                                <CheckCircle2 className="w-5 h-5" /> Matched Keywords ({result.matched_keywords?.length || 0})
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            {result.matched_keywords?.length > 0 ? (
-                                <div className="flex flex-wrap gap-2">
-                                    {result.matched_keywords.map((kw, i) => (
-                                        <Badge key={i} className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20">
-                                            ✅ {kw}
-                                        </Badge>
-                                    ))}
-                                </div>
-                            ) : (
-                                <p className="text-sm text-muted-foreground">No keywords matched</p>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    {/* Missed Keywords */}
-                    <Card className="glass-card">
-                        <CardHeader className="pb-3">
-                            <CardTitle className="flex items-center gap-2 text-base text-red-500">
-                                <XCircle className="w-5 h-5" /> Missed Keywords ({result.missed_keywords?.length || 0})
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            {result.missed_keywords?.length > 0 ? (
-                                <div className="flex flex-wrap gap-2">
-                                    {result.missed_keywords.map((kw, i) => (
-                                        <Badge key={i} className="bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20">
-                                            ❌ {kw}
-                                        </Badge>
-                                    ))}
-                                </div>
-                            ) : (
-                                <p className="text-sm text-muted-foreground">All keywords covered! 🎉</p>
-                            )}
-                        </CardContent>
-                    </Card>
-                </div>
+                {/* Per-Question: Feedback + Matched/Missed Keywords */}
+                {perQuestion ? (
+                    <div className="space-y-4">
+                        <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+                            <BarChart3 className="w-5 h-5 text-primary" />
+                            Per-Question Analysis
+                        </h2>
+                        {perQuestion.map((q, idx) => {
+                            const qColor = q.score >= 80 ? 'emerald' : q.score >= 60 ? 'blue' : q.score >= 40 ? 'amber' : 'red';
+                            const colorMap = {
+                                emerald: 'bg-emerald-500/5 border-emerald-500/20',
+                                blue:    'bg-blue-500/5 border-blue-500/20',
+                                amber:   'bg-amber-500/5 border-amber-500/20',
+                                red:     'bg-red-500/5 border-red-500/20',
+                            };
+                            const scoreColor = {
+                                emerald: 'text-emerald-500',
+                                blue:    'text-blue-500',
+                                amber:   'text-amber-500',
+                                red:     'text-red-500',
+                            };
+                            return (
+                                <Card key={idx} className={`glass-card border ${colorMap[qColor]}`}>
+                                    <CardHeader className="pb-3">
+                                        <div className="flex items-center justify-between">
+                                            <CardTitle className="text-base font-semibold text-foreground">
+                                                {q.question}
+                                                {q.topic && <span className="text-xs font-normal text-muted-foreground ml-2">— {q.topic}</span>}
+                                            </CardTitle>
+                                            <Badge className={`${scoreColor[qColor]} bg-transparent border border-current text-sm font-bold`}>
+                                                {q.score?.toFixed ? q.score.toFixed(1) : q.score}%
+                                            </Badge>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="space-y-3">
+                                        {/* Feedback for this question */}
+                                        {q.feedback && (
+                                            <>
+                                                <div className="bg-muted/40 rounded-lg px-4 py-3">
+                                                    <p className="text-xs font-medium text-amber-500 mb-1 flex items-center gap-1">
+                                                        <Star className="w-3.5 h-3.5" /> Feedback
+                                                    </p>
+                                                    <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">{q.feedback}</p>
+                                                </div>
+                                                <Separator />
+                                            </>
+                                        )}
+                                        {/* Matched */}
+                                        <div>
+                                            <p className="text-xs font-medium text-emerald-500 mb-1.5 flex items-center gap-1">
+                                                <CheckCircle2 className="w-3.5 h-3.5" /> Matched Keywords ({q.matched_keywords?.length || 0})
+                                            </p>
+                                            {q.matched_keywords?.length > 0 ? (
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {q.matched_keywords.map((kw, i) => (
+                                                        <Badge key={i} className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-xs">
+                                                            ✅ {kw}
+                                                        </Badge>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <p className="text-xs text-muted-foreground italic">No keywords matched</p>
+                                            )}
+                                        </div>
+                                        <Separator />
+                                        {/* Missed */}
+                                        <div>
+                                            <p className="text-xs font-medium text-red-500 mb-1.5 flex items-center gap-1">
+                                                <XCircle className="w-3.5 h-3.5" /> Missed Keywords ({q.missed_keywords?.length || 0})
+                                            </p>
+                                            {q.missed_keywords?.length > 0 ? (
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {q.missed_keywords.map((kw, i) => (
+                                                        <Badge key={i} className="bg-red-500/10 text-red-500 border-red-500/20 text-xs">
+                                                            ❌ {kw}
+                                                        </Badge>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <p className="text-xs text-emerald-500 italic">All keywords covered! 🎉</p>
+                                            )}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            );
+                        })}
+                    </div>
+                ) : (
+                    /* Single question — combined keywords view */
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Card className="glass-card">
+                            <CardHeader className="pb-3">
+                                <CardTitle className="flex items-center gap-2 text-base text-emerald-500">
+                                    <CheckCircle2 className="w-5 h-5" /> Matched Keywords ({result.matched_keywords?.length || 0})
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                {result.matched_keywords?.length > 0 ? (
+                                    <div className="flex flex-wrap gap-2">
+                                        {result.matched_keywords.map((kw, i) => (
+                                            <Badge key={i} className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20">
+                                                ✅ {kw}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">No keywords matched</p>
+                                )}
+                            </CardContent>
+                        </Card>
+                        <Card className="glass-card">
+                            <CardHeader className="pb-3">
+                                <CardTitle className="flex items-center gap-2 text-base text-red-500">
+                                    <XCircle className="w-5 h-5" /> Missed Keywords ({result.missed_keywords?.length || 0})
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                {result.missed_keywords?.length > 0 ? (
+                                    <div className="flex flex-wrap gap-2">
+                                        {result.missed_keywords.map((kw, i) => (
+                                            <Badge key={i} className="bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20">
+                                                ❌ {kw}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">All keywords covered! 🎉</p>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
+                )}
 
                 {/* Extracted Answer Text */}
                 {result.student_answer_preview && (

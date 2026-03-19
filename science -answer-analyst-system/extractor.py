@@ -18,13 +18,18 @@ except ImportError:
 try:
     import pytesseract
     from PIL import Image
-    # Test if Tesseract binary is actually installed (not just the Python library)
+    # Set the Tesseract binary path explicitly
+    TESSERACT_PATH = r'C:\Users\User\AppData\Local\Programs\Tesseract-OCR\tesseract.exe'
+    if os.path.exists(TESSERACT_PATH):
+        pytesseract.pytesseract.tesseract_cmd = TESSERACT_PATH
+    # Test if Tesseract binary is actually available
     try:
         pytesseract.get_tesseract_version()
         OCR_SUPPORT = True
+        print("✅ Tesseract OCR detected — PNG/JPG image uploads enabled!")
     except pytesseract.TesseractNotFoundError:
         OCR_SUPPORT = False
-        print("⚠️ Tesseract binary not found. Image OCR disabled. Install from: https://github.com/UB-Mannheim/tesseract/wiki")
+        print("⚠️ Tesseract binary not found. Image OCR disabled.")
 except ImportError:
     OCR_SUPPORT = False
     print("⚠️ pytesseract/Pillow not installed. Image OCR disabled.")

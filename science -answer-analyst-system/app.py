@@ -22,7 +22,7 @@ UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # ── Validation constants ───────────────────────────────────────────────────────
-ALLOWED_EXT      = {'.pdf'}          # Only PDF (no Tesseract installed)
+ALLOWED_EXT      = {'.pdf', '.png', '.jpg', '.jpeg'}  # PDF + Images (Tesseract OCR installed)
 MAX_FILE_SIZE_MB = 10                # Max file size in MB
 MIN_WORD_COUNT   = 15                # Min words required after extraction
 
@@ -167,9 +167,8 @@ def upload_and_analyze():
         if len(headers) == 0:
             answers.append(('Answer', extracted_text))
         else:
-            intro = parts[0].strip()
-            if len(intro) > 30: # Only if intro text is substantial
-                answers.append(('Intro', intro))
+            # Skip parts[0] (intro text before Q1) — student name, date, title etc.
+            # Only score actual question answers (Q1, Q2, ...)
             for i, header in enumerate(headers):
                 content = parts[i+1].strip()
                 if len(content) > 5:
@@ -182,6 +181,7 @@ def upload_and_analyze():
         all_matched = []
         all_missed = []
         combined_feedback = ""
+        per_question_results = []   # NEW: per-question breakdown
         
         num_questions = len(answers)
         
@@ -207,16 +207,31 @@ def upload_and_analyze():
             total_score += score
             total_sim += res.get('similarity_score', 0)
             total_kw += res.get('keyword_coverage', 0)
-            
+
             prefix = "" if header in ["Answer", "Intro"] else f"{header} "
             matched_topic = res.get('question_topic', '')
             topic_label = f" [{matched_topic}]" if matched_topic and num_questions > 1 else ""
-            
-            for kw in res.get('matched_keywords', []):
+
+            q_matched = res.get('matched_keywords', [])
+            q_missed  = res.get('missed_keywords', [])
+
+            for kw in q_matched:
                 all_matched.append(f"{prefix}{kw}")
-            for kw in res.get('missed_keywords', []):
+            for kw in q_missed:
                 all_missed.append(f"{prefix}{kw}")
-            
+
+            # Collect per-question data for frontend breakdown
+            per_question_results.append({
+                "question": header,
+                "topic":    matched_topic,
+                "score":    score,
+                "similarity_score": res.get('similarity_score', 0),
+                "keyword_coverage": res.get('keyword_coverage', 0),
+                "matched_keywords": q_matched,
+                "missed_keywords":  q_missed,
+                "feedback":         res.get('feedback', '')
+            })
+
             # Include the auto-detected topic in feedback for transparency
             combined_feedback += f"\n\n### {header}{topic_label} (Score: {score}%)\n{res.get('feedback', '')}"
         
@@ -247,8 +262,9 @@ def upload_and_analyze():
                 "matched_count": len(unique_matched),
                 "missed_count": len(unique_missed),
                 "feedback": f"📊 **Paper Analysis ({valid_answers} questions analyzed)**\n" + combined_feedback.strip(),
-                "question_topic": topic or "Multi-Question Paper",
-                "word_count": len(extracted_text.split())
+                "question_topic": topic or ("Multi-Question Paper" if num_questions > 1 else ""),
+                "word_count": len(extracted_text.split()),
+                "per_question": per_question_results   # NEW: per-question breakdown
             }
         
         # Add extraction info to result
