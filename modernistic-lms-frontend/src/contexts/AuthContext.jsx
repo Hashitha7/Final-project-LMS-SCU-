@@ -137,9 +137,7 @@ export const AuthProvider = ({ children }) => {
             } catch { }
             throw new Error(msg);
         }
-
-        // Auto-login after registration
-        await login({ identifier: email, password, role: 'STUDENT' });
+        // Registration successful — caller should redirect to /login
     };
 
     const requestPasswordReset = async ({ identifier }) => {

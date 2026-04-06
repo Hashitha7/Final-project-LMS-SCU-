@@ -92,6 +92,7 @@ export const courses = {
   getById: (id) => api.get(`/courses/${id}`).then(r => r.data),
   create: (data) => api.post('/courses', data).then(r => r.data),
   update: (id, data) => api.put(`/courses/${id}`, data).then(r => r.data),
+  autoCreateZoomMeeting: (id) => api.post(`/courses/${id}/zoom/auto-create`).then(r => r.data),
   delete: (id) => api.delete(`/courses/${id}`),
 };
 
@@ -113,26 +114,62 @@ export const classes = {
   delete: (id) => api.delete(`/classes/${id}`),
 };
 
-// ── Exams (backed by Quiz entity) ─────────────────────────
+// ── Class Enrollments ─────────────────────────────────────
+export const classEnrollments = {
+  getAll: () => api.get('/class-enrollments').then(r => r.data),
+  getByStudent: (studentId) => api.get(`/class-enrollments/student/${studentId}`).then(r => r.data),
+  getByClass: (classId) => api.get(`/class-enrollments/class/${classId}`).then(r => r.data),
+  check: (studentId, classId) => api.get('/class-enrollments/check', { params: { studentId, classId } }).then(r => r.data),
+  enroll: (data) => api.post('/class-enrollments', data).then(r => r.data),
+  delete: (id) => api.delete(`/class-enrollments/${id}`),
+};
+
+// ── Exams ──────────────────────────────────────────────────
 export const exams = {
   getAll: () => api.get('/exams').then(r => r.data),
   getById: (id) => api.get(`/exams/${id}`).then(r => r.data),
-  create: (data) => api.post('/exams', data).then(r => r.data),
+  create: (data) => {
+    // Determine if it's an update (has a numeric ID and not a local 'paper_' ID)
+    if (data.id && typeof data.id === 'number' || (typeof data.id === 'string' && !data.id.startsWith('paper_'))) {
+      return api.put(`/exams/${data.id}`, data).then(r => r.data);
+    }
+    // New exam
+    // Remove the fake ID so backend creates it
+    if(data.id && String(data.id).startsWith('paper_')) {
+        delete data.id;
+    }
+    return api.post('/exams', data).then(r => r.data);
+  },
   update: (id, data) => api.put(`/exams/${id}`, data).then(r => r.data),
   delete: (id) => api.delete(`/exams/${id}`),
 };
 
+// ── Exam Submissions (Student Answers / Lecturer Review) ──
+export const examSubmissions = {
+  getAll: () => api.get('/exam-submissions').then(r => r.data),
+  getByExam: (examId) => api.get(`/exam-submissions/exam/${examId}`).then(r => r.data),
+  create: (data) => api.post('/exam-submissions', data).then(r => r.data),
+  review: (id, data) => api.put(`/exam-submissions/${id}/review`, data).then(r => r.data),
+};
+
 // ── SMS ───────────────────────────────────────────────────
 export const sms = {
-  getAll: () => api.get('/sms').then(r => r.data),
+  getAll: () => api.get('/sms').then(r => r.data.map(item => ({
+    ...item,
+    to: item.mobile,
+    body: item.message || item.smsBody,
+    createdAt: item.dateTime
+  }))),
   create: (data) => api.post('/sms', data).then(r => r.data),
   delete: (id) => api.delete(`/sms/${id}`),
 };
 
 // ── Stubs for removed endpoints (return empty arrays safely) ──
 export const payments = {
-  getAll: () => Promise.resolve([]),
-  create: () => Promise.resolve({}),
+  getAll: () => api.get('/payments').then(r => r.data),
+  create: (data) => api.post('/payments', data).then(r => r.data),
+  update: (id, data) => api.put(`/payments/${id}`, data).then(r => r.data),
+  delete: (id) => api.delete(`/payments/${id}`),
 };
 export const attendance = {
   getAll: () => Promise.resolve([]),
@@ -144,8 +181,18 @@ export const zoomClasses = {
   delete: () => Promise.resolve(),
 };
 export const notifications = {
-  getAll: () => Promise.resolve([]),
-  create: () => Promise.resolve({}),
+  getAll: () => {
+    const data = localStorage.getItem('mock_notifications');
+    return Promise.resolve(data ? JSON.parse(data) : []);
+  },
+  create: (n) => {
+    const data = localStorage.getItem('mock_notifications');
+    const list = data ? JSON.parse(data) : [];
+    const idx = list.findIndex(x => x.id === n.id);
+    if(idx >= 0) list[idx] = n; else list.unshift(n);
+    localStorage.setItem('mock_notifications', JSON.stringify(list));
+    return Promise.resolve(n);
+  },
 };
 export const assignments = {
   getAll: () => Promise.resolve([]),
@@ -167,6 +214,9 @@ export const files = {
       headers: { 'Content-Type': 'multipart/form-data' },
     }).then(r => r.data);
   },
+  resolveByName: (fileName, folder = 'general') => api.get('/files/resolve', {
+    params: { fileName, folder },
+  }).then(r => r.data),
   delete: (url) => api.delete('/files/delete', { params: { url } }).then(r => r.data),
 };
 

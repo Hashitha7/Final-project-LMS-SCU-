@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/sonner';
-import { Plus, Eye, EyeOff, UserCheck, Trash2, Power, PowerOff } from 'lucide-react';
+import { Plus, Eye, EyeOff, UserCheck, Trash2, Power, PowerOff, UploadCloud, User } from 'lucide-react';
+import { files } from '@/lib/api';
 
 const EMPTY_DRAFT = {
     id: '',
@@ -37,6 +38,7 @@ const Teachers = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [uploadingImage, setUploadingImage] = useState(false);
     const [errors, setErrors] = useState({});
 
     const set = (field, value) => {
@@ -93,6 +95,9 @@ const Teachers = () => {
             }
             await upsertUser(payload);
             toast.success(isEditing ? '✅ Teacher updated successfully!' : '✅ Teacher added successfully!');
+            if (!isEditing) {
+                setTimeout(() => toast.success(`📧 Welcome email with login credentials sent to ${payload.email}`), 800);
+            }
             setIsDialogOpen(false);
         } catch (err) {
             const msg = err?.response?.data?.message || err.message || 'Failed to save teacher';
@@ -164,11 +169,17 @@ const Teachers = () => {
                                 {/* Avatar */}
                                 <div className="relative flex-shrink-0">
                                     <div className="w-20 h-20 rounded-xl overflow-hidden border-2 border-slate-200 dark:border-slate-700 bg-slate-100">
-                                        <img
-                                            src={t.imageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(t.name)}&backgroundColor=b6e3f4,c0aede,d1d4f9`}
-                                            alt={t.name}
-                                            className="w-full h-full object-cover"
-                                        />
+                                        {t.imageUrl ? (
+                                            <img
+                                                src={t.imageUrl}
+                                                alt={t.name}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-400">
+                                                <User className="w-8 h-8 opacity-50" />
+                                            </div>
+                                        )}
                                     </div>
                                     {t.status === 'inactive' && (
                                         <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
@@ -206,13 +217,7 @@ const Teachers = () => {
                                         : <><PowerOff className="w-3.5 h-3.5" /> Deactivate</>
                                     }
                                 </button>
-                                <div className="flex-1" />
-                                <button
-                                    onClick={() => navigate(`/app/teachers/${t.id}/classes`)}
-                                    className="bg-slate-800 hover:bg-slate-700 active:scale-95 text-white text-xs font-bold px-4 py-2 rounded-md transition-all"
-                                >
-                                    View Classes
-                                </button>
+
                             </div>
                         </div>
                     ))}
@@ -249,6 +254,56 @@ const Teachers = () => {
                         </DialogHeader>
 
                         <div className="grid gap-4 py-2">
+                            {/* Profile Picture Upload */}
+                            <div className="grid gap-1.5">
+                                <Label>Profile Picture</Label>
+                                <div className="flex items-center gap-4 mt-1">
+                                    <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 flex-shrink-0 relative">
+                                        {draft.imageUrl ? (
+                                            <img src={draft.imageUrl} className="w-full h-full object-cover" alt="Profile" />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-slate-400">
+                                                <User className="w-6 h-6" />
+                                            </div>
+                                        )}
+                                        {uploadingImage && (
+                                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="flex-1">
+                                        <Label htmlFor="image-upload" className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-slate-800 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-slate-700 border border-blue-200 dark:border-slate-700 rounded-md text-xs font-semibold transition-colors">
+                                            <UploadCloud className="w-4 h-4" />
+                                            {uploadingImage ? 'Uploading...' : 'Upload Image'}
+                                        </Label>
+                                        <Input 
+                                            id="image-upload" 
+                                            type="file" 
+                                            accept="image/*" 
+                                            className="hidden" 
+                                            disabled={uploadingImage}
+                                            onChange={async (e) => {
+                                                const file = e.target.files?.[0];
+                                                if (!file) return;
+                                                setUploadingImage(true);
+                                                try {
+                                                    const res = await files.upload(file, 'teachers');
+                                                    set('imageUrl', res.url);
+                                                    toast.success('Image uploaded successfully!');
+                                                } catch (err) {
+                                                    toast.error('Failed to upload image. Max 100MB allowed.');
+                                                } finally {
+                                                    setUploadingImage(false);
+                                                    e.target.value = '';
+                                                }
+                                            }} 
+                                        />
+                                        <p className="text-[10px] text-slate-400 mt-1">Accepts JPG/PNG (S3 Storage)</p>
+                                    </div>
+                                </div>
+                            </div>
+
                             {/* Name */}
                             <div className="grid gap-1.5">
                                 <Label htmlFor="t-name">

@@ -5,11 +5,14 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 @Entity
 @Table(name = "quiz")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Quiz {
 
     @Id
@@ -38,6 +41,14 @@ public class Quiz {
     private int state = 0;
 
     private int sell = 0;
+
+    private Long courseId;
+
+    private Long classId;
+
+    private String date;
+
+    private String status;
 
     @ManyToOne
     @JoinColumn(name = "teacher_id", nullable = false)

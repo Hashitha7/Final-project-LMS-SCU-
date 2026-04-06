@@ -51,6 +51,7 @@ const Lessons = () => {
         fee: '',
         validityDays: '',
         teacherId: '',
+        courseId: '',
         status: 'active',
     });
 
@@ -114,6 +115,7 @@ const Lessons = () => {
             fee: Number(formData.fee) || 0,
             validityDays: Number(formData.validityDays) || 0,
             activeStatus: formData.status === 'active' ? 1 : 0,
+            courseId: formData.courseId && formData.courseId !== 'none' ? Number(formData.courseId) : null,
             teacher: formData.teacherId ? { id: Number(formData.teacherId) } : null,
         };
 
@@ -143,6 +145,7 @@ const Lessons = () => {
             fee: '',
             validityDays: '',
             teacherId: '',
+            courseId: '',
             status: 'active',
         });
         setView('list');
@@ -158,6 +161,7 @@ const Lessons = () => {
             fee: (lesson.fee || 0).toString(),
             validityDays: (lesson.validityDays || 0).toString(),
             teacherId: lesson.teacherId || lesson.teacher?.id || '',
+            courseId: lesson.courseId?.toString() || '',
             status: lesson.activeStatus === 1 || lesson.status === 'active' ? 'active' : 'inactive',
         });
         setView('edit');
@@ -184,11 +188,7 @@ const Lessons = () => {
                         {/* Header */}
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
                             <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">Lessons</h1>
-                            {(user?.role === 'admin' || user?.role === 'teacher') && (
-                                <Button onClick={() => { resetForm(); setView('create'); }} className="bg-orange-600 hover:bg-orange-700 text-white shadow-lg shadow-orange-600/20 px-6 h-11 rounded-lg">
-                                    <Plus className="w-5 h-5 mr-2" /> Add Lesson
-                                </Button>
-                            )}
+
                         </div>
 
                         {/* Search Bar */}
@@ -310,7 +310,7 @@ const Lessons = () => {
                                                         >
                                                             <Eye className="w-3.5 h-3.5 mr-1.5" /> View
                                                         </Button>
-                                                        {(user?.role === 'admin' || user?.role === 'teacher') && (
+                                                        {(user?.role === 'admin' || user?.role === 'teacher' || user?.role === 'institute') && (
                                                             <>
                                                                 <Button
                                                                     variant="outline"
@@ -407,6 +407,22 @@ const Lessons = () => {
                                                 className="h-11"
                                             />
                                         </div>
+                                    </div>
+
+                                    {/* Link to Course */}
+                                    <div className="space-y-2">
+                                        <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Link to Course</Label>
+                                        <Select value={formData.courseId} onValueChange={(v) => setFormData(prev => ({ ...prev, courseId: v }))}>
+                                            <SelectTrigger className="h-11">
+                                                <SelectValue placeholder="Select a course (Optional)" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="none">No Course Linked</SelectItem>
+                                                {courses.map(c => (
+                                                    <SelectItem key={c.id} value={c.id.toString()}>{c.title || c.name}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
 
                                     {/* Teacher Select */}

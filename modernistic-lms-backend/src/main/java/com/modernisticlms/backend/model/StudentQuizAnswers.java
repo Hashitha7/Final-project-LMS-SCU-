@@ -22,6 +22,10 @@ public class StudentQuizAnswers {
     private Student student;
 
     @ManyToOne
+    @JoinColumn(name = "quiz_id")
+    private Quiz quiz;
+
+    @ManyToOne
     @JoinColumn(name = "quiz_class_id")
     private QuizClass quizClass;
 
@@ -37,6 +41,7 @@ public class StudentQuizAnswers {
     @JoinColumn(name = "course_enroll_id")
     private CourseEnroll courseEnroll;
 
+    @Column(columnDefinition = "LONGTEXT")
     private String answers;
 
     private int mark = 0;
@@ -45,6 +50,7 @@ public class StudentQuizAnswers {
 
     private int isFinalMarkCalculated = 0;
 
+    @Column(columnDefinition = "LONGTEXT")
     private String teacherComments;
 
     private LocalDateTime startDateTime;

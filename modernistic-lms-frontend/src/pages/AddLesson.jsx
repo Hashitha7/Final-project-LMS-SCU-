@@ -146,6 +146,12 @@ const AddLesson = () => {
             return;
         }
 
+        const resources = [
+            ...(formData.video ? [{ id: Math.random().toString(36).substr(2, 9), type: 'video', title: 'Preview Video', url: formData.video, premium: false }] : []),
+            ...formData.videos.map(v => ({ id: Math.random().toString(36).substr(2, 9), type: 'video', title: v.title || 'Video', url: v.url, premium: !formData.sellSeparately })),
+            ...formData.pdfs.map(p => ({ id: Math.random().toString(36).substr(2, 9), type: 'pdf', title: p.name || 'PDF', url: p.url, premium: !formData.sellSeparately }))
+        ];
+
         // Map frontend fields to backend Lesson model fields
         const payload = {
             name: formData.lessonName,
@@ -156,10 +162,17 @@ const AddLesson = () => {
             validityDays: Number(formData.validityDays) || 0,
             activeStatus: 1,
             teacher: formData.teacherId ? { id: Number(formData.teacherId) } : null,
+            resources: resources
         };
 
         try {
-            await upsertLesson(payload);
+            if (formData.selectedClasses.length > 0) {
+                for (const cId of formData.selectedClasses) {
+                    await upsertLesson({ ...payload, courseId: cId });
+                }
+            } else {
+                await upsertLesson(payload);
+            }
             toast.success("Lesson saved to database successfully!");
             navigate('/app/lessons');
         } catch (err) {

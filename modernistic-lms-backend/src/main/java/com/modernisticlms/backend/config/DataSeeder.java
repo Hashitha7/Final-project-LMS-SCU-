@@ -35,7 +35,7 @@ public class DataSeeder {
                 institute.setMaxStorage(10737418240L); // 10GB
                 institute.setCurrentUsage(0L);
                 instituteRepository.save(institute);
-                System.out.println("✅ Seeded default Institute: admin@modernisticlms.com / demo123");
+                System.out.println(" Seeded default Institute: admin@modernisticlms.com / demo123");
             } else {
                 // Update password to ensure it's correct
                 instituteRepository.findByEmail("admin@modernisticlms.com").ifPresent(inst -> {
@@ -55,7 +55,7 @@ public class DataSeeder {
                 teacher.setQualification("B.Sc. in Education");
                 teacher.setMaxEnrolls(100);
                 teacherRepository.save(teacher);
-                System.out.println("✅ Seeded default Teacher: teacher@modernisticlms.com / demo123");
+                System.out.println(" Seeded default Teacher: teacher@modernisticlms.com / demo123");
             } else {
                 teacherRepository.findByEmail("teacher@modernisticlms.com").ifPresent(t -> {
                     t.setPassword(passwordEncoder.encode("demo123"));
@@ -74,7 +74,7 @@ public class DataSeeder {
                 student.setSchool("Modernistic LMS School");
                 student.setStatus("active");
                 studentRepository.save(student);
-                System.out.println("✅ Seeded default Student: student@modernisticlms.com / demo123");
+                System.out.println(" Seeded default Student: student@modernisticlms.com / demo123");
             } else {
                 studentRepository.findByEmail("student@modernisticlms.com").ifPresent(s -> {
                     s.setPassword(passwordEncoder.encode("demo123"));

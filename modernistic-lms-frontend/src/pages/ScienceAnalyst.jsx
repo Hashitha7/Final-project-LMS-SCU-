@@ -30,14 +30,8 @@ const ScienceAnalyst = () => {
     // Results state
     const [results, setResults] = useState([]);
     const [loadingResults, setLoadingResults] = useState(true);
-    const [serviceHealth, setServiceHealth] = useState(null);
-
-    // Check service health on mount
+    // Load results on mount
     useEffect(() => {
-        api.get('/science-analyst/health')
-            .then(r => setServiceHealth(r.data))
-            .catch(() => setServiceHealth({ flaskService: 'unavailable' }));
-
         loadResults();
     }, []);
 
@@ -181,15 +175,6 @@ const ScienceAnalyst = () => {
                     <p className="text-muted-foreground mt-1">Upload student answer sheets for AI-powered keyword analysis</p>
                 </div>
 
-                {/* Service Status */}
-                {serviceHealth && serviceHealth.flaskService === 'unavailable' && (
-                    <Card className="border-amber-500/30 bg-amber-500/5">
-                        <CardContent className="py-3 flex items-center gap-2 text-amber-600">
-                            <Zap className="w-4 h-4" />
-                            <span className="text-sm font-medium">Python AI Service is not running. Start it with: <code className="bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 rounded text-xs">python app.py</code></span>
-                        </CardContent>
-                    </Card>
-                )}
 
                 {/* Stats Row */}
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
@@ -354,7 +339,7 @@ const ScienceAnalyst = () => {
                                 <Button
                                     onClick={handleAnalyze}
                                     disabled={isAnalyzing}
-                                    className="gradient-primary text-primary-foreground px-8 py-2.5"
+                                    className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-2.5 shadow-md transition-colors"
                                     size="lg"
                                 >
                                     {isAnalyzing ? (

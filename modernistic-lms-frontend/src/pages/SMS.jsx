@@ -148,13 +148,17 @@ const SMS = ({ view = 'class' }) => {
       ? `[Scheduled: ${format(date, 'yyyy-MM-dd')}] ${message}`
       : message;
 
-    sendSms(recipientName, body);
-
-    toast.success(`Message sent successfully to ${recipientName}!`);
-    setMessage('');
-    setCustomRecipient('');
-    setIsSending(false);
-    setShowConfirm(false);
+    try {
+      await sendSms(recipientName, body);
+      toast.success(`Message sent successfully to ${recipientName}!`);
+      setMessage('');
+      setCustomRecipient('');
+      setShowConfirm(false);
+    } catch (err) {
+      toast.error('Failed to send message: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const sortedLogs = useMemo(() => {

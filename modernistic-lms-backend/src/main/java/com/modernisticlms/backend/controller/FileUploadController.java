@@ -3,6 +3,7 @@ package com.modernisticlms.backend.controller;
 import com.modernisticlms.backend.service.S3Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.exception.SdkClientException;
@@ -24,6 +25,7 @@ public class FileUploadController {
      * Returns: { "url": "https://..." }
      */
     @PostMapping("/upload")
+    @PreAuthorize("hasAnyAuthority('INSTITUTE','TEACHER','STUDENT')")
     public ResponseEntity<?> uploadFile(
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "folder", defaultValue = "general") String folder) {
@@ -60,12 +62,34 @@ public class FileUploadController {
      * DELETE /api/files/delete?url=https://...
      */
     @DeleteMapping("/delete")
+    @PreAuthorize("hasAnyAuthority('INSTITUTE','TEACHER')")
     public ResponseEntity<?> deleteFile(@RequestParam("url") String fileUrl) {
         try {
             s3Service.deleteFile(fileUrl);
             return ResponseEntity.ok(Map.of("message", "File deleted successfully"));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("message", "Delete failed: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/resolve")
+    @PreAuthorize("hasAnyAuthority('INSTITUTE','TEACHER','STUDENT')")
+    public ResponseEntity<?> resolveFileUrl(
+            @RequestParam("fileName") String fileName,
+            @RequestParam(value = "folder", defaultValue = "general") String folder) {
+        try {
+            String url = s3Service.resolveLatestFileUrl(folder, fileName);
+            return ResponseEntity.ok(Map.of("url", url));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        } catch (SdkClientException e) {
+            return ResponseEntity.status(503).body(Map.of(
+                    "message", "Resolve failed: AWS credentials are not configured. Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY, then restart backend."));
+        } catch (S3Exception e) {
+            return ResponseEntity.status(e.statusCode() > 0 ? e.statusCode() : 502).body(Map.of(
+                    "message", "Resolve failed: " + e.awsErrorDetails().errorMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("message", "Resolve failed: " + e.getMessage()));
         }
     }
 }

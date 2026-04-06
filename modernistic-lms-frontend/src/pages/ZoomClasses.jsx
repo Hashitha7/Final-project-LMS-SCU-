@@ -7,8 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
-  Video, Power, ExternalLink, Search, Clock, Users, Monitor,
-  Calendar, Shield, Copy, CheckCircle2, AlertCircle, Wifi, WifiOff
+  Video, Power, ExternalLink, Search, Users, Monitor,
+  Calendar, Shield, Copy, CheckCircle2, Wifi, WifiOff
 } from 'lucide-react';
 import {
   Dialog,
@@ -20,33 +20,89 @@ import { toast } from '@/components/ui/sonner';
 
 const ZoomClasses = () => {
   const { user } = useAuth();
-  const { courses, users } = useLmsData();
+  const { courses, classes, users, payments, upsertCourse, createCourseZoomMeeting } = useLmsData();
   const [search, setSearch] = useState('');
   const [selectedMeeting, setSelectedMeeting] = useState(null);
   const [copiedField, setCopiedField] = useState('');
+  const [processingMeetingId, setProcessingMeetingId] = useState(null);
+  const isAdmin = user?.role === 'admin' || user?.role === 'institute';
+  const isTeacher = user?.role === 'teacher';
+  const isStudent = user?.role === 'student';
 
   if (!user) return <Navigate to="/login" />;
 
-  // Filter courses that have Zoom meetings configured
+  const hasStudentPaymentAccess = (courseId) => {
+    return (payments || []).some(
+      (p) => String(p.studentId) === String(user.id)
+        && String(p.courseId) === String(courseId)
+        && ['completed', 'approved'].includes(String(p.status || '').toLowerCase())
+    );
+  };
+
+  // Build visible Zoom course list by role
   const zoomMeetings = useMemo(() => {
-    return (courses || [])
-      .filter(c => c.zoomMeetingId || c.zoomStartUrl || c.zoomJoinUrl)
+    const combinedData = [
+      ...(courses || []),
+      ...(classes || []).map(cls => ({
+        ...cls,
+        title: cls.name,
+        currentTeacherId: cls.teacherId,
+        type: 'class'
+      }))
+    ];
+
+    let visible = combinedData
       .filter(c => {
         const cName = (c.title || c.name || '').toLowerCase();
         return cName.includes(search.toLowerCase());
-      })
-      .map(c => {
+      });
+
+    if (isTeacher) {
+      visible = visible.filter((c) => String(c.currentTeacherId || '') === String(user.id));
+    }
+
+    if (isStudent) {
+      visible = visible.filter((c) => {
+        const hasJoinInfo = !!(c.zoomJoinUrl || c.zoomMeetingId);
+        if (!hasJoinInfo) return false;
+
+        // If it evaluates as a class
+        if (c.type === 'class') {
+           const mappedCourses = c.courseIds || [];
+           if (mappedCourses.length === 0) return true; // Visible to all if not restricted to a course
+           return mappedCourses.some(cid => hasStudentPaymentAccess(cid));
+        }
+
+        const fee = Number(c.totalFee || c.fee || c.price || 0);
+        if (fee <= 0) return true;
+        return hasStudentPaymentAccess(c.id);
+      });
+    }
+
+    return visible.map(c => {
         const teacher = users?.find(u => u.id === c.currentTeacherId && u.role === 'teacher');
         const isLive = c.lastMeetingStartedAt &&
           (new Date() - new Date(c.lastMeetingStartedAt)) < 3 * 60 * 60 * 1000; // Within 3 hours
+        const canStudentJoin = isStudent
+          ? (c.type === 'class' ? true : ((Number(c.totalFee || c.fee || c.price || 0) <= 0) || hasStudentPaymentAccess(c.id)))
+            && !!c.zoomJoinUrl
+          : false;
         return {
           ...c,
           teacherName: teacher?.name || 'Unassigned',
           teacherEmail: teacher?.email || '',
           isLive,
+          canStudentJoin,
         };
+      })
+      .sort((a, b) => {
+        if (a.isLive && !b.isLive) return -1;
+        if (!a.isLive && b.isLive) return 1;
+        const aDate = a.lastMeetingStartedAt ? new Date(a.lastMeetingStartedAt).getTime() : 0;
+        const bDate = b.lastMeetingStartedAt ? new Date(b.lastMeetingStartedAt).getTime() : 0;
+        return bDate - aDate;
       });
-  }, [courses, users, search]);
+  }, [courses, users, payments, search, isTeacher, isStudent, user.id]);
 
   // Stats
   const totalMeetings = zoomMeetings.length;
@@ -60,8 +116,36 @@ const ZoomClasses = () => {
     setTimeout(() => setCopiedField(''), 2000);
   };
 
-  const handleRelease = (meeting) => {
-    toast.success(`Zoom account released for "${meeting.title || meeting.name}"`);
+  const buildCoursePayload = (meeting, patch = {}) => ({
+    ...meeting,
+    name: meeting.name || meeting.title || '',
+    description: meeting.description || '',
+    imageUrl: meeting.imageUrl || meeting.image || '',
+    videoUrl: meeting.videoUrl || meeting.video || '',
+    totalFee: Number(meeting.totalFee || meeting.price || 0),
+    noOfInstallments: Number(meeting.noOfInstallments || meeting.installments || 0),
+    noOfSemesters: Number(meeting.noOfSemesters || 0),
+    currentTeacherId: meeting.currentTeacherId || null,
+    ...patch,
+  });
+
+  const handleRelease = async (meeting) => {
+    setProcessingMeetingId(meeting.id);
+    try {
+      await upsertCourse(buildCoursePayload(meeting, {
+        zoomStartUrl: null,
+        zoomJoinUrl: null,
+        zoomMeetingId: null,
+        zoomMeetingPassword: null,
+        lastMeetingStartedAt: null,
+      }));
+      toast.success(`Zoom account released for "${meeting.title || meeting.name}"`);
+      if (selectedMeeting?.id === meeting.id) setSelectedMeeting(null);
+    } catch (err) {
+      toast.error(`Failed to release Zoom account: ${err?.response?.data?.message || err.message}`);
+    } finally {
+      setProcessingMeetingId(null);
+    }
   };
 
   const handleJoin = (url) => {
@@ -69,14 +153,29 @@ const ZoomClasses = () => {
     else toast.error('No Zoom join link available');
   };
 
-  const handleStart = (url) => {
-    if (url) window.open(url, '_blank');
-    else toast.error('No Zoom start link available');
-  };
+  const handleStart = async (meeting) => {
+    setProcessingMeetingId(meeting.id);
+    try {
+      const updatedCourse = await createCourseZoomMeeting(meeting.id);
+      const startUrl = updatedCourse?.zoomStartUrl || meeting.zoomStartUrl;
 
-  const isAdmin = user?.role === 'admin' || user?.role === 'institute';
-  const isTeacher = user?.role === 'teacher';
-  const isStudent = user?.role === 'student';
+      if (!startUrl) {
+        toast.error('Zoom start link was not returned. Check Zoom configuration and try again.');
+        return;
+      }
+
+      window.open(startUrl, '_blank');
+      if (!meeting.zoomMeetingId && updatedCourse?.zoomMeetingId) {
+        toast.success('Zoom meeting auto-created and started.');
+      } else {
+        toast.success('Meeting started successfully.');
+      }
+    } catch (err) {
+      toast.error(`Failed to start meeting: ${err?.response?.data?.message || err.message}`);
+    } finally {
+      setProcessingMeetingId(null);
+    }
+  };
 
   return (
     <AppLayout>
@@ -275,6 +374,7 @@ const ZoomClasses = () => {
                           size="sm"
                           className="text-xs h-9 text-red-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200"
                           onClick={() => handleRelease(meeting)}
+                          disabled={processingMeetingId === meeting.id}
                         >
                           <Power className="w-3.5 h-3.5 mr-1.5" /> Release
                         </Button>
@@ -287,9 +387,10 @@ const ZoomClasses = () => {
                         <Button
                           size="sm"
                           className="flex-1 text-xs h-9 bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-600/20"
-                          onClick={() => handleStart(meeting.zoomStartUrl)}
+                          onClick={() => handleStart(meeting)}
+                          disabled={processingMeetingId === meeting.id}
                         >
-                          <Video className="w-3.5 h-3.5 mr-1.5" /> Start Meeting
+                          <Video className="w-3.5 h-3.5 mr-1.5" /> {meeting.zoomStartUrl ? 'Start Meeting' : 'Create & Start'}
                         </Button>
                         <Button
                           variant="outline"
@@ -312,9 +413,10 @@ const ZoomClasses = () => {
                             : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20'
                             }`}
                           onClick={() => handleJoin(meeting.zoomJoinUrl)}
+                          disabled={!meeting.canStudentJoin}
                         >
                           <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-                          {meeting.isLive ? 'Join Live' : 'Join Meeting'}
+                          {!meeting.canStudentJoin ? 'Not Available' : meeting.isLive ? 'Join Live' : 'Join Meeting'}
                         </Button>
                         <Button
                           variant="outline"
@@ -340,7 +442,9 @@ const ZoomClasses = () => {
             <p className="text-sm text-slate-400 mt-1">
               {isAdmin
                 ? 'No courses have Zoom meetings configured yet.'
-                : 'No Zoom classes are scheduled at this time.'}
+                : isTeacher
+                  ? 'No classes assigned to you yet. Ask admin to assign a course.'
+                  : 'No eligible Zoom classes yet. Complete payment/enrollment and wait for meeting links.'}
             </p>
             {isAdmin && (
               <p className="text-xs text-slate-400 mt-3">
@@ -416,11 +520,11 @@ const ZoomClasses = () => {
                     <ExternalLink className="w-4 h-4 mr-2" /> Join Zoom Meeting
                   </Button>
                 )}
-                {(isAdmin || isTeacher) && selectedMeeting?.zoomStartUrl && (
+                {(isAdmin || isTeacher) && selectedMeeting && (
                   <Button
                     variant="outline"
                     className="w-full h-10"
-                    onClick={() => handleStart(selectedMeeting.zoomStartUrl)}
+                    onClick={() => handleStart(selectedMeeting)}
                   >
                     <Video className="w-4 h-4 mr-2" /> Start as Host
                   </Button>

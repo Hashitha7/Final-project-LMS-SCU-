@@ -261,7 +261,7 @@ def upload_and_analyze():
                 "total_keywords": len(unique_matched) + len(unique_missed),
                 "matched_count": len(unique_matched),
                 "missed_count": len(unique_missed),
-                "feedback": f"📊 **Paper Analysis ({valid_answers} questions analyzed)**\n" + combined_feedback.strip(),
+                "feedback": f" **Paper Analysis ({valid_answers} questions analyzed)**\n" + combined_feedback.strip(),
                 "question_topic": topic or ("Multi-Question Paper" if num_questions > 1 else ""),
                 "word_count": len(extracted_text.split()),
                 "per_question": per_question_results   # NEW: per-question breakdown
@@ -317,17 +317,17 @@ def analyze_text():
 
 
 if __name__ == '__main__':
-    print("🧪 Science AI Answer Analyst — Flask Service")
+    print(" Science AI Answer Analyst — Flask Service")
     print("=" * 50)
     
     analyzer = get_analyzer()
     if analyzer.is_loaded:
-        print(f"📚 {len(analyzer.dataset)} questions loaded from trained model")
+        print(f" {len(analyzer.dataset)} questions loaded from trained model")
     else:
-        print("⚠️  No trained model found. Running in fallback mode.")
+        print("  No trained model found. Running in fallback mode.")
         print("   Run Google Colab training to get better accuracy!")
     
-    print(f"\n🚀 Starting server on http://localhost:5000")
+    print(f"\n Starting server on http://localhost:5000")
     print("=" * 50)
     
     app.run(host='0.0.0.0', port=5000, debug=True)

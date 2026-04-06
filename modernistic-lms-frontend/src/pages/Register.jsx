@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { GraduationCap, UserCog, ArrowRight } from 'lucide-react';
+import { GridScan } from '@/components/GridScan';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -32,8 +33,8 @@ const Register = () => {
     setLoading(true);
     try {
       await registerStudent({ name, email, mobile, password, grade });
-      toast.success('Account created! Welcome to Modernistic LMS.');
-      navigate('/app/dashboard', { replace: true });
+      toast.success('Account created! Please sign in to continue.');
+      navigate('/login', { replace: true });
     } catch (err) {
       toast.error(err?.message ?? 'Registration failed');
     } finally {
@@ -42,14 +43,22 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-background via-background to-primary/10">
-      <Card className="w-full max-w-md shadow-xl border border-border/50">
-        <CardHeader className="space-y-1 pb-4">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center text-primary-foreground font-bold text-xl shadow-lg">E</div>
-            <span className="text-xl font-bold tracking-tight">Modernistic LMS Hub</span>
-          </div>
-          <CardTitle className="text-2xl font-bold">Create Student Account</CardTitle>
+    <div className="relative min-h-screen flex items-center justify-center px-4 overflow-hidden bg-slate-950">
+      <div className="absolute inset-0 z-0 pointer-events-auto opacity-70">
+        <GridScan 
+          scanColor="#fb8500" 
+          linesColor="#1e293b" 
+          bloomIntensity={1.5} 
+          scanOpacity={0.6}
+        />
+      </div>
+      <div className="relative z-10 w-full max-w-md">
+        <Card className="w-full shadow-2xl border border-slate-700/50 bg-white/90 backdrop-blur-xl dark:bg-slate-900/90">
+          <CardHeader className="space-y-1 pb-4">
+            <div className="flex items-center mb-2">
+              <span className="text-xl font-bold tracking-tight">Modernistic LMS Hub</span>
+            </div>
+            <CardTitle className="text-2xl font-bold">Create Student Account</CardTitle>
           <p className="text-sm text-muted-foreground">
             Join Modernistic LMS and start learning today.
           </p>
@@ -123,7 +132,7 @@ const Register = () => {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full h-11 gradient-primary text-primary-foreground text-base shadow-lg hover:shadow-xl transition-all"
+              className="w-full h-11 bg-sky-500 hover:bg-sky-600 text-white text-base shadow-lg hover:shadow-xl transition-all"
             >
               {loading ? 'Creating account…' : 'Create Account'}
               {!loading && <ArrowRight className="ml-2 w-4 h-4" />}
@@ -138,6 +147,7 @@ const Register = () => {
           </form>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 };

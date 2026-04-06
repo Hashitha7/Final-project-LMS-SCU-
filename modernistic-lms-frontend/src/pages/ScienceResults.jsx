@@ -417,11 +417,11 @@ const ScienceResults = () => {
                 )}
 
                 {/* Action buttons */}
-                <div className="flex justify-between">
-                    <Button variant="outline" onClick={() => navigate('/app/science-analyst')}>
+                <div className="flex justify-between mt-6">
+                    <Button className="bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 shadow-sm transition-colors" onClick={() => navigate('/app/science-analyst')}>
                         <ArrowLeft className="w-4 h-4 mr-2" /> Back
                     </Button>
-                    <Button className="gradient-primary text-primary-foreground" onClick={() => navigate('/app/science-analyst')}>
+                    <Button className="bg-blue-500 hover:bg-blue-600 text-white shadow-md transition-colors" onClick={() => navigate('/app/science-analyst')}>
                         <Brain className="w-4 h-4 mr-2" /> Analyze Another
                     </Button>
                 </div>

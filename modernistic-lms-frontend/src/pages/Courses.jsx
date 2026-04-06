@@ -33,6 +33,7 @@ const Courses = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { courses, users, upsertCourse, deleteCourse, payments } = useLmsData();
+  const isStudent = user?.role === 'student';
 
   // View State: 'list' | 'create' | 'edit'
   const [view, setView] = useState('list');
@@ -61,10 +62,13 @@ const Courses = () => {
     video: null,
     startDate: '',
     endDate: '',
-    semesters: '',
     price: '',
     installments: '',
     installmentPrice: '',
+    zoomStartUrl: '',
+    zoomJoinUrl: '',
+    zoomMeetingId: '',
+    zoomMeetingPassword: '',
     timeTable: [],
     teacherId: '',
     status: 'active',
@@ -85,6 +89,41 @@ const Courses = () => {
       })
       .sort((a, b) => (a.title || a.name || '').localeCompare(b.title || b.name || ''));
   }, [courses, search]);
+
+  const studentCourseMeta = useMemo(() => {
+    if (!isStudent || !user) return [];
+
+    return filteredCourses.map((course) => {
+      const courseId = String(course.id);
+      const amount = Number(course.price || course.fee || course.totalFee || 0);
+      const paymentRows = payments.filter(
+        (p) => String(p.studentId) === String(user.id) && String(p.courseId) === courseId
+      );
+
+      const completed = paymentRows.some((p) => p.status === 'completed');
+      const pending = paymentRows.some((p) => p.status === 'pending');
+      const free = amount <= 0;
+      const canAccess = free || completed;
+
+      return {
+        course,
+        amount,
+        free,
+        completed,
+        pending,
+        canAccess,
+      };
+    });
+  }, [filteredCourses, isStudent, payments, user]);
+
+  const studentStats = useMemo(() => {
+    if (!isStudent) return { canAccess: 0, pending: 0, unpaid: 0 };
+    return {
+      canAccess: studentCourseMeta.filter((c) => c.canAccess).length,
+      pending: studentCourseMeta.filter((c) => c.pending && !c.canAccess).length,
+      unpaid: studentCourseMeta.filter((c) => !c.free && !c.completed && !c.pending).length,
+    };
+  }, [isStudent, studentCourseMeta]);
 
   // Helpers
   const [uploading, setUploading] = useState({ image: false, video: false });
@@ -129,11 +168,15 @@ const Courses = () => {
       videoUrl: formData.video || '',
       totalFee: Number(formData.price) || 0,
       noOfInstallments: Number(formData.installments) || 1,
-      noOfSemesters: Number(formData.semesters) || 1,
+      noOfSemesters: 1,
       startDate: formData.startDate,
       endDate: formData.endDate,
       status: formData.status || 'active',
       currentTeacherId: formData.teacherId ? Number(formData.teacherId) : null,
+      zoomStartUrl: formData.zoomStartUrl || null,
+      zoomJoinUrl: formData.zoomJoinUrl || null,
+      zoomMeetingId: formData.zoomMeetingId || null,
+      zoomMeetingPassword: formData.zoomMeetingPassword || null,
     };
 
     try {
@@ -166,10 +209,13 @@ const Courses = () => {
       video: null,
       startDate: '',
       endDate: '',
-      semesters: '',
       price: '',
       installments: '',
       installmentPrice: '',
+      zoomStartUrl: '',
+      zoomJoinUrl: '',
+      zoomMeetingId: '',
+      zoomMeetingPassword: '',
       timeTable: [],
       teacherId: '',
       status: 'active',
@@ -190,8 +236,11 @@ const Courses = () => {
       endDate: course.endDate || '',
       price: (course.price || course.totalFee || 0).toString(),
       installments: (course.installments || course.noOfInstallments || '').toString(),
-      semesters: (course.semesters || course.noOfSemesters || '').toString(),
       installmentPrice: '',
+      zoomStartUrl: course.zoomStartUrl || '',
+      zoomJoinUrl: course.zoomJoinUrl || '',
+      zoomMeetingId: course.zoomMeetingId || '',
+      zoomMeetingPassword: course.zoomMeetingPassword || '',
       timeTable: course.timeTable || course.dayTimes || [],
       teacherId: course.teacherId || course.currentTeacherId || '',
       status: course.status || 'active',
@@ -278,18 +327,37 @@ const Courses = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Total Fee (LKR)</Label>
           <Input type="number" value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} placeholder="0.00" className="h-11 bg-slate-50 border-slate-200" />
         </div>
         <div className="space-y-2">
-          <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">No. of Semesters</Label>
-          <Input type="number" value={formData.semesters} onChange={e => setFormData({ ...formData, semesters: e.target.value })} placeholder="1" className="h-11 bg-slate-50 border-slate-200" />
-        </div>
-        <div className="space-y-2">
           <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">No. of Installments</Label>
           <Input type="number" value={formData.installments} onChange={e => setFormData({ ...formData, installments: e.target.value })} placeholder="1" className="h-11 bg-slate-50 border-slate-200" />
+        </div>
+      </div>
+
+      <div className="space-y-4 rounded-xl border border-slate-200 dark:border-slate-800 p-4 bg-slate-50/60 dark:bg-slate-900/30">
+        <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Zoom Meeting Configuration</h4>
+        <div className="space-y-2">
+          <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Zoom Auto Link</Label>
+          <div className="flex gap-2">
+            <Input value={formData.zoomJoinUrl} onChange={e => setFormData({ ...formData, zoomJoinUrl: e.target.value, zoomStartUrl: e.target.value })} placeholder="https://zoom.us/j/..." className="h-11 bg-white dark:bg-slate-900 border-slate-200 flex-1" />
+            <Button
+              type="button"
+              onClick={() => {
+                const randomId = Math.floor(100000000 + Math.random() * 900000000);
+                const pwd = Math.random().toString(36).slice(-6);
+                const generatedLink = `https://zoom.us/j/${randomId}?pwd=${pwd}`;
+                setFormData(prev => ({ ...prev, zoomJoinUrl: generatedLink, zoomStartUrl: generatedLink }));
+                toast.success('Course-specific Zoom link generated!');
+              }}
+              className="h-11 bg-orange-600 hover:bg-orange-700 text-white font-medium px-4"
+            >
+              Generate Link
+            </Button>
+          </div>
         </div>
       </div>
     </div>
@@ -394,6 +462,10 @@ const Courses = () => {
               <span className="text-sm text-slate-500">Assigned Teacher</span>
               <span className="font-medium text-slate-900 dark:text-slate-100">{users.find(u => u.id === formData.teacherId)?.name || 'Unassigned'}</span>
             </div>
+            <div className="flex justify-between items-center py-2 border-t border-slate-50 dark:border-slate-800/50">
+              <span className="text-sm text-slate-500">Zoom Config</span>
+              <span className="font-medium text-slate-900 dark:text-slate-100">{formData.zoomJoinUrl ? 'Configured' : 'Not configured'}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -408,12 +480,16 @@ const Courses = () => {
         {/* Header Section */}
         <div className="flex flex-col gap-1">
           <div className="flex items-center text-sm text-slate-500 font-medium mb-2">
-            <span className="hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer" onClick={() => navigate('/app/teachers')}>Teachers</span>
+            <span className="hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer" onClick={() => navigate(isStudent ? '/app/dashboard' : '/app/teachers')}>
+              {isStudent ? 'My Learning' : 'Teachers'}
+            </span>
             <span className="mx-2 text-slate-300">/</span>
-            <span className="hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer">Manage Course</span>
+            <span className="hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer">{isStudent ? 'Courses' : 'Manage Course'}</span>
             <span className="mx-2 text-slate-300">/</span>
             <span className="font-semibold text-slate-900 dark:text-white">
-              {view === 'list' ? 'View Courses' : (view === 'create' ? 'Add Course' : 'Edit Course')}
+              {view === 'list'
+                ? (isStudent ? 'My Courses' : 'View Courses')
+                : (view === 'create' ? 'Add Course' : 'Edit Course')}
             </span>
           </div>
         </div>
@@ -421,11 +497,26 @@ const Courses = () => {
         {view === 'list' ? (
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
-              <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">Courses</h1>
-              <Button onClick={() => { resetForm(); setView('create'); }} className="bg-orange-600 hover:bg-orange-700 text-white shadow-lg shadow-orange-600/20 px-6 h-11 rounded-lg">
-                <Plus className="w-5 h-5 mr-2" /> Add Course
-              </Button>
+              <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">{isStudent ? 'My Courses' : 'Courses'}</h1>
+
             </div>
+
+            {isStudent && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="rounded-xl border bg-white dark:bg-slate-900 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Ready To Learn</p>
+                  <p className="text-2xl font-bold mt-1">{studentStats.canAccess}</p>
+                </div>
+                <div className="rounded-xl border bg-white dark:bg-slate-900 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Pending Verification</p>
+                  <p className="text-2xl font-bold mt-1">{studentStats.pending}</p>
+                </div>
+                <div className="rounded-xl border bg-white dark:bg-slate-900 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Need Payment</p>
+                  <p className="text-2xl font-bold mt-1">{studentStats.unpaid}</p>
+                </div>
+              </div>
+            )}
 
             {/* Search & Filter Bar */}
             <div className="bg-white dark:bg-slate-900 p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm max-w-md flex items-center">
@@ -442,7 +533,60 @@ const Courses = () => {
 
             {/* Course Cards View */}
             <div className="space-y-6">
-              {filteredCourses.length > 0 ? (
+              {isStudent ? (
+                studentCourseMeta.length > 0 ? (
+                  studentCourseMeta.map(({ course, amount, free, completed, pending, canAccess }) => (
+                    <div key={course.id} className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800 p-6 flex flex-col md:flex-row gap-6 md:items-center">
+                      <div className="w-full md:w-72 aspect-video bg-slate-100 dark:bg-slate-800 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700">
+                        {(course.image || course.imageUrl) ? (
+                          <img src={course.image || course.imageUrl} alt={course.title || course.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs font-semibold">No Cover Image</div>
+                        )}
+                      </div>
+
+                      <div className="flex-1 space-y-3">
+                        <h2 className="text-2xl font-bold text-slate-800 dark:text-blue-400">{course.title || course.name}</h2>
+                        <p className="text-sm text-slate-600 dark:text-slate-300 line-clamp-2">{course.description || 'No description provided for this course.'}</p>
+                        <div className="flex flex-wrap gap-2">
+                          {free && <Badge className="bg-emerald-600 text-white">Free Course</Badge>}
+                          {completed && <Badge className="bg-blue-600 text-white">Payment Completed</Badge>}
+                          {pending && !completed && <Badge variant="secondary">Payment Pending</Badge>}
+                          {!free && !completed && !pending && <Badge variant="outline">Payment Required</Badge>}
+                        </div>
+                        <p className="text-sm text-slate-500">Fee: LKR {amount.toLocaleString()}</p>
+                      </div>
+
+                      <div className="w-full md:w-56 flex flex-col gap-2">
+                        {canAccess ? (
+                          <Button onClick={() => navigate(`/app/courses/${course.id}`)} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold">
+                            Continue Learning
+                          </Button>
+                        ) : pending ? (
+                          <Button variant="outline" onClick={() => navigate('/app/payments')}>
+                            Check Payment Status
+                          </Button>
+                        ) : (
+                          <Button onClick={() => navigate(`/app/payments?action=pay&courseId=${course.id}`)} className="bg-orange-600 hover:bg-orange-700 text-white font-semibold">
+                            Pay & Enroll
+                          </Button>
+                        )}
+                        <Button variant="ghost" onClick={() => navigate(`/app/courses/${course.id}`)}>
+                          View Course Details
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-20 bg-white dark:bg-slate-900 rounded-xl border border-dashed border-slate-300 dark:border-slate-700">
+                    <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-full inline-block mb-4">
+                      <Search className="w-8 h-8 opacity-40" />
+                    </div>
+                    <p className="text-lg font-medium text-slate-900 dark:text-slate-100">No courses found</p>
+                    <p className="text-sm text-slate-500 mt-1">Try adjusting your search.</p>
+                  </div>
+                )
+              ) : filteredCourses.length > 0 ? (
                 filteredCourses.map((course) => (
                   <div key={course.id} className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800 p-6 flex flex-col items-center lg:items-start lg:flex-row gap-8">
                     {/* Left: Image & Details */}
@@ -483,8 +627,7 @@ const Courses = () => {
                             <span className="text-slate-700 dark:text-slate-300 font-medium">{(course.teacherId || course.currentTeacherId) ? '1' : '0'}</span>
                           </div>
                           <div className="flex flex-col col-span-2">
-                            <span className="text-xs text-slate-500 font-semibold mb-0.5">Number of Semesters :</span>
-                            <span className="text-slate-700 dark:text-slate-300 font-medium">{course.semesters || course.noOfSemesters || '0'}</span>
+                            {/* Semester Field Removed */}
                           </div>
                         </div>
                       </div>
@@ -507,8 +650,17 @@ const Courses = () => {
 
                     {/* Right: Actions Stack */}
                     <div className="w-full lg:w-64 flex flex-col gap-3 flex-shrink-0 pt-1">
-                      <Button onClick={() => navigate(`/app/courses/${course.id}`)} className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold shadow-md h-10 transition-transform active:scale-95">
-                        Start Course Session
+                      <Button onClick={() => {
+                        if (course.zoomJoinUrl || course.zoomStartUrl) {
+                          window.open(course.zoomJoinUrl || course.zoomStartUrl, '_blank');
+                        } else {
+                          toast.error('No Zoom link configured for this course.');
+                        }
+                      }} className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold shadow-md h-10 transition-transform active:scale-95">
+                        Start Live Session
+                      </Button>
+                      <Button onClick={() => navigate(`/app/courses/${course.id}`)} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-md h-10 transition-transform active:scale-95">
+                        Manage Lessons
                       </Button>
                       <Button onClick={() => startEdit(course)} className="w-full bg-slate-800 hover:bg-slate-900 text-white font-medium shadow-sm h-10 border border-slate-700">
                         Edit Course

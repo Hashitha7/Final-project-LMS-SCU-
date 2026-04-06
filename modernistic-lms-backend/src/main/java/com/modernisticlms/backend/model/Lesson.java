@@ -34,6 +34,13 @@ public class Lesson {
 
     private int activeStatus = 1;
 
+    private Long courseId;
+    
+    private Integer lessonOrder;
+
+    @Column(columnDefinition = "LONGTEXT")
+    private String resourcesJson;
+
     @ManyToOne
     @JoinColumn(name = "teacher_id")
     @com.fasterxml.jackson.annotation.JsonIgnoreProperties({ "password" })

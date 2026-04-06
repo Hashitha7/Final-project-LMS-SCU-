@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Table(name = "class")
@@ -61,9 +62,21 @@ public class SchoolClass {
     private String zoomMeetingPassword;
 
     @ManyToOne
-    @JoinColumn(name = "institute_teacher_id")
-    private InstituteTeacher instituteTeacher;
+    @JoinColumn(name = "teacher_id")
+    private Teacher teacher;
 
     @OneToMany(mappedBy = "schoolClass", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<ClassDayTime> dayTimes;
+
+    @OneToMany(mappedBy = "schoolClass", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
+    private List<ClassEnroll> enrollments;
+
+    @OneToMany(mappedBy = "schoolClass", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
+    private List<QuizClass> quizClasses;
+
+    @OneToMany(mappedBy = "schoolClass", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
+    private List<ClassAttendance> attendances;
 }

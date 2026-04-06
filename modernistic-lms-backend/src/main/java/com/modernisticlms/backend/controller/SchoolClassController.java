@@ -4,6 +4,7 @@ import com.modernisticlms.backend.model.SchoolClass;
 import com.modernisticlms.backend.repository.SchoolClassRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -28,11 +29,13 @@ public class SchoolClassController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('INSTITUTE')")
     public SchoolClass createClass(@RequestBody SchoolClass schoolClass) {
         return schoolClassRepository.save(schoolClass);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('INSTITUTE')")
     public ResponseEntity<SchoolClass> updateClass(@PathVariable Long id, @RequestBody SchoolClass updated) {
         return schoolClassRepository.findById(id).map(sc -> {
             sc.setName(updated.getName());
@@ -44,12 +47,13 @@ public class SchoolClassController {
             sc.setFirstWeekFree(updated.isFirstWeekFree());
             sc.setImageUrl(updated.getImageUrl());
             sc.setActiveStatus(updated.getActiveStatus());
-            sc.setInstituteTeacher(updated.getInstituteTeacher());
+            sc.setTeacher(updated.getTeacher());
             return ResponseEntity.ok(schoolClassRepository.save(sc));
         }).orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('INSTITUTE')")
     public ResponseEntity<Void> deleteClass(@PathVariable Long id) {
         schoolClassRepository.deleteById(id);
         return ResponseEntity.noContent().build();

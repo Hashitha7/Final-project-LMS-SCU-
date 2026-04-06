@@ -16,7 +16,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/components/ui/sonner';
-import { Plus, ClipboardList, Clock, FileText, Play, Shield } from 'lucide-react';
+import { ClipboardList, Clock, FileText, Play } from 'lucide-react';
 import { uid } from '@/lib/storage';
 const inferExamType = (questions) => {
   const types = new Set(questions.map((q) => q.type));
@@ -34,7 +34,7 @@ const defaultIntegrity = {
 const Exams = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { exams, courses, examAttempts, upsertExam } = useLmsData();
+  const { exams, courses, examAttempts, upsertExam, deleteExam } = useLmsData();
   const [search, setSearch] = useState('');
   const canManage = user?.role === 'admin' || user?.role === 'teacher';
   const filtered = useMemo(() => {
@@ -208,15 +208,28 @@ const Exams = () => {
             <TableBody>
               {filtered.map((e) => {
                 const course = courses.find((c) => c.id === e.courseId);
-                const latestMyAttempt = user.role === 'student'
+                const roleLower = user?.role?.toLowerCase();
+                const latestMyAttempt = roleLower === 'student'
                   ? (attemptsByExam.get(e.id) || []).find((a) => a.studentId === user.id)
                   : null;
                 const action = (() => {
-                  if (user.role !== 'student')
-                    return <span className="text-xs text-muted-foreground">—</span>;
+                  const role = roleLower;
+                  if (role === 'admin' || role === 'teacher' || role === 'institute') {
+                    return (
+                      <div className="flex justify-end gap-2">
+                        {(role === 'institute' || role === 'teacher') && (
+                          <Button size="sm" variant="outline" onClick={() => navigate(`/app/exams/review?examId=${e.id}`)}>
+                            Review Answers
+                          </Button>
+                        )}
+                        <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => deleteExam(e.id)}>Delete</Button>
+                      </div>
+                    );
+                  }
                   if (latestMyAttempt) {
                     return (<div className="text-xs text-muted-foreground text-right">
-                      <div>Last score: {latestMyAttempt.score}/{latestMyAttempt.maxScore}</div>
+                      <div>Status: {latestMyAttempt.isFinalMarkCalculated === 1 ? 'Reviewed' : 'Pending Review'}</div>
+                      {latestMyAttempt.isFinalMarkCalculated === 1 && <div>Mark: {latestMyAttempt.mark}</div>}
                       <Button size="sm" variant="outline" className="mt-2" onClick={() => navigate(`/app/exams/take/${e.id}`)}>
                         Retake
                       </Button>
@@ -228,14 +241,14 @@ const Exams = () => {
                 })();
                 return (<TableRow key={e.id} className="hover:bg-secondary/50">
                   <TableCell className="font-medium text-foreground">{e.title}</TableCell>
-                  <TableCell className="text-muted-foreground">{course?.title ?? '—'}</TableCell>
-                  <TableCell><Badge variant="outline">{inferExamType(e.questions)}</Badge></TableCell>
-                  <TableCell className="text-muted-foreground">{e.date}</TableCell>
-                  <TableCell>{e.durationMin} min</TableCell>
-                  <TableCell>{e.questions.length}</TableCell>
+                  <TableCell className="text-muted-foreground">{course?.name || course?.title || '—'}</TableCell>
+                  <TableCell><Badge variant="outline">{e.quizType || e.type || inferExamType(e?.questions || [])}</Badge></TableCell>
+                  <TableCell className="text-muted-foreground">{e.date || new Date().toISOString().slice(0, 10)}</TableCell>
+                  <TableCell>{e.paperDuration || e.durationMin || 60} min</TableCell>
+                  <TableCell>{e.noOfQuestions || e.questions?.length || 0}</TableCell>
                   <TableCell>
-                    <Badge variant={e.status === 'upcoming' || e.status === 'live' ? 'default' : e.status === 'completed' ? 'secondary' : 'outline'}>
-                      {e.status}
+                    <Badge variant={e.status === 'upcoming' || e.state === 1 || e.status === 'live' ? 'default' : e.status === 'completed' ? 'secondary' : 'outline'}>
+                      {e.status || (e.state === 1 ? 'Live' : 'Draft')}
                     </Badge>
                   </TableCell>
                   <TableCell>

@@ -59,12 +59,12 @@ class ScienceAnalyzer:
                 self.tfidf_matrix = self.model['tfidf_matrix']
                 self.dataset = self.model['dataset']
                 self.is_loaded = True
-                print(f"✅ Model loaded: {len(self.dataset)} questions available")
+                print(f" Model loaded: {len(self.dataset)} questions available")
             except Exception as e:
-                print(f"⚠️ Failed to load model: {e}")
+                print(f" Failed to load model: {e}")
                 self._init_fallback()
         else:
-            print(f"⚠️ Model not found at {MODEL_PATH}. Using fallback mode.")
+            print(f" Model not found at {MODEL_PATH}. Using fallback mode.")
             self._init_fallback()
     
     def _init_fallback(self):
@@ -331,22 +331,22 @@ class ScienceAnalyzer:
         feedback_parts = []
         
         if grade == "Excellent":
-            feedback_parts.append("🌟 Excellent work! Your answer demonstrates a strong understanding of the topic.")
+            feedback_parts.append(" Excellent work! Your answer demonstrates a strong understanding of the topic.")
         elif grade == "Good":
-            feedback_parts.append("👍 Good effort! Your answer covers most of the key concepts.")
+            feedback_parts.append(" Good effort! Your answer covers most of the key concepts.")
         elif grade == "Fair":
-            feedback_parts.append("📝 Fair attempt. Your answer covers some concepts but misses several important points.")
+            feedback_parts.append(" Fair attempt. Your answer covers some concepts but misses several important points.")
         else:
-            feedback_parts.append("📚 Your answer needs improvement. Many key concepts are missing.")
+            feedback_parts.append(" Your answer needs improvement. Many key concepts are missing.")
         
         if matched:
-            feedback_parts.append(f"✅ You correctly covered {len(matched)} key concept(s): {', '.join(matched[:8])}.")
+            feedback_parts.append(f" You correctly covered {len(matched)} key concept(s): {', '.join(matched[:8])}.")
         
         if missed:
-            feedback_parts.append(f"❌ You missed {len(missed)} concept(s). Try to include: {', '.join(missed[:8])}.")
+            feedback_parts.append(f" You missed {len(missed)} concept(s). Try to include: {', '.join(missed[:8])}.")
         
         if percentage < 60:
-            feedback_parts.append("💡 Tip: Review the relevant textbook chapter and focus on the key terminology and concepts.")
+            feedback_parts.append(" Tip: Review the relevant textbook chapter and focus on the key terminology and concepts.")
         
         return ' '.join(feedback_parts)
 

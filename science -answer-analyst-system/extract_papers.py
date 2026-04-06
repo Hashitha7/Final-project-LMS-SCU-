@@ -63,7 +63,7 @@ def extract_text_from_pdf(pdf_path):
                 if text:
                     all_text.append(text)
     except Exception as e:
-        print(f"  ⚠️ Error reading {pdf_path}: {e}")
+        print(f"   Error reading {pdf_path}: {e}")
     return "\n".join(all_text)
 
 def extract_qa_pairs_from_marking_scheme(text, grade, source_file):
@@ -176,29 +176,29 @@ def extract_qa_from_teacher_guide(text, grade, source_file):
 
 # ─── Main ────────────────────────────────────────────────────────────────────
 def main():
-    print("🚀 Science Dataset Extraction Tool")
+    print(" Science Dataset Extraction Tool")
     print("=" * 50)
     
     # Load existing dataset
     existing_df = pd.read_csv(EXISTING_CSV) if os.path.exists(EXISTING_CSV) else pd.DataFrame()
-    print(f"📂 Existing dataset: {len(existing_df)} questions\n")
+    print(f" Existing dataset: {len(existing_df)} questions\n")
     
     all_new_pairs = []
     
     pdf_files = [f for f in os.listdir(PAPERS_FOLDER) if f.lower().endswith('.pdf')]
-    print(f"📁 Found {len(pdf_files)} PDF files to process:\n")
+    print(f" Found {len(pdf_files)} PDF files to process:\n")
     
     for pdf_file in sorted(pdf_files):
         pdf_path = os.path.join(PAPERS_FOLDER, pdf_file)
         grade = detect_grade(pdf_file)
         is_teacher_guide = 'teacher' in pdf_file.lower() or 'guide' in pdf_file.lower()
         
-        print(f"📖 Processing: {pdf_file}")
+        print(f" Processing: {pdf_file}")
         print(f"   Grade: {grade} | Type: {'Teacher Guide' if is_teacher_guide else 'Past Paper/Marking Scheme'}")
         
         text = extract_text_from_pdf(pdf_path)
         if not text or len(text.strip()) < 100:
-            print(f"   ⚠️ Could not extract enough text, skipping.\n")
+            print(f"    Could not extract enough text, skipping.\n")
             continue
         
         if is_teacher_guide:
@@ -206,11 +206,11 @@ def main():
         else:
             pairs = extract_qa_pairs_from_marking_scheme(text, grade, pdf_file)
         
-        print(f"   ✅ Extracted {len(pairs)} Q&A pairs\n")
+        print(f"    Extracted {len(pairs)} Q&A pairs\n")
         all_new_pairs.extend(pairs)
     
     if not all_new_pairs:
-        print("❌ No Q&A pairs extracted. Check PDF readability.")
+        print(" No Q&A pairs extracted. Check PDF readability.")
         return
     
     # Build new DataFrame
@@ -238,13 +238,13 @@ def main():
     combined_df.to_csv(OUTPUT_CSV, index=False)
     
     print("=" * 50)
-    print(f"✅ DONE! New dataset saved to: {OUTPUT_CSV}")
-    print(f"📊 Total questions: {len(combined_df)}")
+    print(f" DONE! New dataset saved to: {OUTPUT_CSV}")
+    print(f" Total questions: {len(combined_df)}")
     print(f"   (Was: {len(existing_df)} → Now: {len(combined_df)})")
-    print(f"\n📊 Breakdown by Subject:")
+    print(f"\n Breakdown by Subject:")
     if 'subject' in combined_df.columns:
         print(combined_df.groupby(['grade', 'subject']).size().to_string())
-    print(f"\n👉 Next Step: Run 'python train_model.py' to retrain the AI model!")
+    print(f"\n Next Step: Run 'python train_model.py' to retrain the AI model!")
 
 if __name__ == "__main__":
     main()

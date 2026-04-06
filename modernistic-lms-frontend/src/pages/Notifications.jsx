@@ -51,18 +51,13 @@ const Notifications = () => {
   };
 
   // --- Admin View: Special Notification Form ---
-  if (user.role === 'admin') {
+  if (['admin', 'institute'].includes(user.role)) {
     return (
       <AppLayout>
-        <div className="space-y-6">
-          {/* Breadcrumb Header */}
-          <div className="flex items-center text-sm text-slate-500 mb-6">
-            <span className="hover:text-slate-900 cursor-pointer" onClick={() => navigate('/app/teachers')}>Teachers</span>
-            <span className="mx-2">/</span>
-            <span className="font-semibold text-slate-900">Special Notification</span>
-          </div>
+        <div className="space-y-6 pt-12 lg:pt-0 max-w-3xl">
+          <PageHeader title="Special Notification" subtitle="Send announcements to users" />
 
-          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-8 min-h-[600px] flex flex-col relative overflow-hidden">
+          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-8 min-h-[500px] flex flex-col relative overflow-hidden">
             {/* Decorative top border */}
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-cyan-500" />
 

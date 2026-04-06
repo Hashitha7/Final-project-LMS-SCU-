@@ -20,19 +20,19 @@ DATASET_PATH = os.path.join(BASE_DIR, "data", "science_dataset.csv")
 MODEL_PATH = os.path.join(BASE_DIR, "models", "science_model.pkl")
 
 def main():
-    print("🧠 Science AI Model Training")
+    print(" Science AI Model Training")
     print("=" * 50)
     
     # Load dataset
     df = pd.read_csv(DATASET_PATH)
     df = df.dropna(subset=['model_answer'])
     df['model_answer'] = df['model_answer'].astype(str)
-    print(f"📂 Loaded {len(df)} Q&A pairs\n")
+    print(f" Loaded {len(df)} Q&A pairs\n")
     
     stop_words = list(stopwords.words('english'))
     
     # Step 1: Extract keywords using TF-IDF
-    print("🔍 Extracting keywords from model answers...")
+    print(" Extracting keywords from model answers...")
     keyword_vectorizer = TfidfVectorizer(
         stop_words=stop_words,
         max_features=20000,
@@ -52,10 +52,10 @@ def main():
     
     df['keywords'] = keywords_list
     df.to_csv(DATASET_PATH, index=False)
-    print(f"  ✅ Keywords extracted for all {len(df)} entries\n")
+    print(f"   Keywords extracted for all {len(df)} entries\n")
     
     # Step 2: Train main TF-IDF vectorizer
-    print("🏋️ Training main TF-IDF similarity matrix...")
+    print(" Training main TF-IDF similarity matrix...")
     main_vectorizer = TfidfVectorizer(
         stop_words='english',
         max_features=15000,
@@ -63,8 +63,8 @@ def main():
         sublinear_tf=True
     )
     tfidf_matrix = main_vectorizer.fit_transform(df['model_answer'])
-    print(f"  ✅ Vocabulary: {len(main_vectorizer.vocabulary_)} terms")
-    print(f"  ✅ Matrix shape: {tfidf_matrix.shape}\n")
+    print(f"   Vocabulary: {len(main_vectorizer.vocabulary_)} terms")
+    print(f"   Matrix shape: {tfidf_matrix.shape}\n")
     
     # Step 3: Package and save
     model = {
@@ -85,10 +85,10 @@ def main():
     
     model_size = os.path.getsize(MODEL_PATH) / (1024 * 1024)
     print("=" * 50)
-    print(f"🎉 Model trained and saved to: {MODEL_PATH}")
-    print(f"   📦 Model size: {model_size:.1f} MB")
-    print(f"   📊 Total Q&A pairs: {len(df)}")
-    print(f"\n👉 Restart your Python Flask server to load the new model!")
+    print(f" Model trained and saved to: {MODEL_PATH}")
+    print(f"    Model size: {model_size:.1f} MB")
+    print(f"    Total Q&A pairs: {len(df)}")
+    print(f"\n Restart your Python Flask server to load the new model!")
 
 if __name__ == "__main__":
     main()

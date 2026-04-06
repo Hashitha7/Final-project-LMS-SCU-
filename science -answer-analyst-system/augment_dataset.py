@@ -183,18 +183,18 @@ def augment_dataset(df):
     return pd.DataFrame(new_rows)
 
 def main():
-    print("🔬 Science Dataset Augmentation Tool")
+    print(" Science Dataset Augmentation Tool")
     print("=" * 50)
     
     # Load existing dataset
     df = pd.read_csv(DATASET_PATH)
     original_count = len(df)
-    print(f"📂 Loaded {original_count} existing Q&A pairs\n")
+    print(f" Loaded {original_count} existing Q&A pairs\n")
     
     # Run augmentation
-    print("⚙️  Generating augmented entries...")
+    print("  Generating augmented entries...")
     augmented_df = augment_dataset(df)
-    print(f"✅ Generated {len(augmented_df)} new entries from augmentation\n")
+    print(f" Generated {len(augmented_df)} new entries from augmentation\n")
     
     # Combine
     for col in df.columns:
@@ -218,13 +218,13 @@ def main():
     combined.to_csv(DATASET_PATH, index=False)
     
     print("=" * 50)
-    print(f"🎉 Dataset expanded!")
+    print(f" Dataset expanded!")
     print(f"   Was:  {original_count} questions")
     print(f"   Now:  {len(combined)} questions")
-    print(f"\n📊 Breakdown by Subject:")
+    print(f"\n Breakdown by Subject:")
     if 'subject' in combined.columns:
         print(combined.groupby(['grade', 'subject']).size().to_string())
-    print(f"\n👉 Run 'python train_model.py' to retrain with the expanded dataset!")
+    print(f"\n Run 'python train_model.py' to retrain with the expanded dataset!")
 
 if __name__ == "__main__":
     main()

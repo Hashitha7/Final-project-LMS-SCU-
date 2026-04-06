@@ -13,6 +13,9 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
 
 import java.io.IOException;
+import java.util.Comparator;
+import java.util.Locale;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -39,7 +42,8 @@ public class S3Service {
         boolean hasExplicitKeys = !isBlank(accessKeyId) && !isBlank(secretAccessKey);
         if (hasExplicitKeys) {
             if (isPlaceholder(accessKeyId) || isPlaceholder(secretAccessKey)) {
-                throw new IllegalStateException("Invalid AWS S3 credentials configuration: placeholder values detected. Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY or remove placeholders.");
+                throw new IllegalStateException(
+                        "Invalid AWS S3 credentials configuration: placeholder values detected. Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY or remove placeholders.");
             }
 
             AwsBasicCredentials credentials = AwsBasicCredentials.create(accessKeyId.trim(), secretAccessKey.trim());
@@ -69,13 +73,10 @@ public class S3Service {
      * @return the public URL of the uploaded file
      */
     public String uploadFile(MultipartFile file, String folder) throws IOException {
-        // Generate a unique file name to avoid collisions
+        // Generate a unique file name and preserve original name for easier traceability.
         String originalFilename = file.getOriginalFilename();
-        String extension = "";
-        if (originalFilename != null && originalFilename.contains(".")) {
-            extension = originalFilename.substring(originalFilename.lastIndexOf("."));
-        }
-        String key = folder + "/" + UUID.randomUUID().toString() + extension;
+        String safeName = sanitizeFileName(originalFilename);
+        String key = normalizeFolder(folder) + UUID.randomUUID() + "__" + safeName;
 
         PutObjectRequest putRequest = PutObjectRequest.builder()
                 .bucket(bucketName)
@@ -87,6 +88,40 @@ public class S3Service {
 
         // Return the public URL
         return String.format("https://%s.s3.%s.amazonaws.com/%s", bucketName, region, key);
+    }
+
+    public String resolveLatestFileUrl(String folder, String fileName) {
+        String normalizedTarget = normalizeForSearch(fileName);
+        if (normalizedTarget.isBlank()) {
+            throw new IllegalArgumentException("fileName is required");
+        }
+
+        String prefix = normalizeFolder(folder);
+        ListObjectsV2Request request = ListObjectsV2Request.builder()
+                .bucket(bucketName)
+                .prefix(prefix)
+                .build();
+
+        ListObjectsV2Response response = s3Client.listObjectsV2(request);
+        if (response.contents() == null || response.contents().isEmpty()) {
+            throw new IllegalArgumentException("No files found in the requested folder");
+        }
+
+        S3Object match = response.contents().stream()
+                .filter(Objects::nonNull)
+                .filter(obj -> {
+                    String key = obj.key();
+                    if (key == null || key.isBlank()) {
+                        return false;
+                    }
+                    String keyName = key.substring(key.lastIndexOf('/') + 1);
+                    String normalizedKeyName = normalizeForSearch(keyName);
+                    return normalizedKeyName.contains(normalizedTarget);
+                })
+                .max(Comparator.comparing(S3Object::lastModified))
+                .orElseThrow(() -> new IllegalArgumentException("Matching file not found in S3"));
+
+        return String.format("https://%s.s3.%s.amazonaws.com/%s", bucketName, region, match.key());
     }
 
     /**
@@ -106,5 +141,27 @@ public class S3Service {
                 .build();
 
         s3Client.deleteObject(deleteRequest);
+    }
+
+    private String normalizeFolder(String folder) {
+        String trimmed = (folder == null || folder.isBlank()) ? "general" : folder.trim();
+        return trimmed.endsWith("/") ? trimmed : trimmed + "/";
+    }
+
+    private String sanitizeFileName(String fileName) {
+        if (fileName == null || fileName.isBlank()) {
+            return "file.bin";
+        }
+
+        String safe = fileName.trim().replaceAll("[^A-Za-z0-9._-]", "_");
+        return safe.isBlank() ? "file.bin" : safe;
+    }
+
+    private String normalizeForSearch(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9]", "");
     }
 }

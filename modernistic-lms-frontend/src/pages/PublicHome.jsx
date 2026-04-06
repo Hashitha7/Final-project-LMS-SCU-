@@ -39,13 +39,28 @@ const PublicHome = () => {
 
           <h1 className="text-4xl md:text-5xl lg:text-[4rem] font-black tracking-tight text-foreground mb-6 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100 leading-[1.1]">
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-700 via-indigo-600 to-purple-700 dark:from-blue-400 dark:via-indigo-400 dark:to-purple-400">
-              Elevate Education with Our Modernistic LMS with AI Answer Analyst System Platform
+              School Management + AI Learning in One Modernistic LMS Platform
             </span>
           </h1>
+
+          <p className="mx-auto mb-8 max-w-3xl text-base md:text-lg text-slate-700 dark:text-slate-200 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
+            Manage courses, classes, exams, attendance, payments, Zoom sessions, and science answer analysis from a single role-based system for Institute Admins, Teachers, and Students.
+          </p>
+
+          <div className="mb-8 flex flex-wrap justify-center gap-2 animate-in fade-in slide-in-from-bottom-10 duration-700 delay-250">
+            <Badge variant="secondary">Institute Dashboard</Badge>
+            <Badge variant="secondary">Teacher Workspace</Badge>
+            <Badge variant="secondary">Student Portal</Badge>
+            <Badge variant="secondary">Secure Payments</Badge>
+            <Badge variant="secondary">Science AI Analyst</Badge>
+          </div>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-in fade-in slide-in-from-bottom-10 duration-700 delay-300">
             <Button asChild size="lg" className="h-12 px-8 text-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30 hover:shadow-xl transition-all rounded-full hover:scale-105 active:scale-95">
               <Link to="/register">Get Started <ArrowRight className="ml-2 w-5 h-5" /></Link>
+            </Button>
+            <Button asChild size="lg" variant="outline" className="h-12 px-8 text-lg rounded-full">
+              <Link to="/login">Login to Dashboard</Link>
             </Button>
           </div>
         </div>
@@ -55,9 +70,9 @@ const PublicHome = () => {
       <section id="features" className="py-20 bg-secondary/30">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16 max-w-2xl mx-auto">
-            <h2 className="text-3xl font-bold mb-4">Everything you need to teach</h2>
+            <h2 className="text-3xl font-bold mb-4">Everything Your LMS Needs</h2>
             <p className="text-muted-foreground text-lg">
-              Powerful tools for Admins, Teachers, and Students, all in one unified platform.
+              Production-ready modules already available in this system for day-to-day school operations.
             </p>
           </div>
 
@@ -66,32 +81,32 @@ const PublicHome = () => {
               {
                 icon: BookOpen,
                 title: 'AI Answer Analyst',
-                desc: 'Upload student written answers. Our AI Engine instantly evaluates Science questions using NLP TF-IDF keyword matching and gives a score.'
+                desc: 'Upload student written answers and get instant science scoring, missing keyword analysis, and topic-based feedback.'
               },
               {
                 icon: Award,
-                title: 'Smart Exams & Courses',
-                desc: 'Create and manage rich courses, MCQ quizzes, and structured modules specifically designed for O/L Students.'
+                title: 'Courses, Lessons & Exams',
+                desc: 'Create courses, organize lessons, schedule papers, and track student progress in one consistent flow.'
               },
               {
                 icon: BarChart3,
                 title: 'Analytics & Reports',
-                desc: 'Track student performance graphically. Identify weak science concepts through continuous AI assessment feedback.'
+                desc: 'Monitor performance trends, attendance impact, and learning outcomes with actionable reporting views.'
               },
               {
                 icon: Users,
                 title: 'Role-Based Portals',
-                desc: 'Dedicated, secure dashboards for Administrators, Teachers, and Students, ensuring privacy and ease of navigation.'
+                desc: 'Separate experiences for Institute Admins, Teachers, and Students with secure role-aware navigation.'
               },
               {
                 icon: CreditCard,
-                title: 'Flexible Payments',
-                desc: 'Accept online payments or track offline manual bank deposit slips securely. Manage revenue and course enrollments.'
+                title: 'Payment & Enrollment',
+                desc: 'Students can pay and enroll, while admins can verify, refund, and track all transaction history centrally.'
               },
               {
                 icon: Video,
                 title: 'Zoom Integration',
-                desc: 'Seamlessly schedule and launch live Zoom classes directly from the platform without sharing external links.'
+                desc: 'Schedule and run live class sessions directly through integrated Zoom workflow support.'
               },
             ].map((feature, i) => (<Card key={i} className="glass-card hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-primary/10">
               <CardHeader>
@@ -114,26 +129,26 @@ const PublicHome = () => {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-8">
               <h2 className="text-3xl md:text-5xl font-black leading-tight tracking-tight">
-                Focus on teaching, <br />
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">the AI handles grading.</span>
+                Focus on management and teaching, <br />
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">the platform handles operations.</span>
               </h2>
               <p className="text-xl text-muted-foreground font-medium">
-                Modernistic LMS automates the repetitive marking process — evaluating Grade 10 and 11 Biology, Chemistry, and Physics questions instantly.
+                From student registration to payment verification to AI-based science answer analysis, this system reduces manual workload for your team.
               </p>
               <div className="space-y-4">
                 {[
-                  'NLP Keyword Extraction Scoring',
-                  'TF-IDF Semantic Matching',
-                  '100% Offline AI Processing',
-                  'Sri Lankan O/L Curriculum Trained'
+                  'Student, Teacher, and Institute account management',
+                  'Course, class, lesson, and exam administration',
+                  'Online card payments + offline deposit handling',
+                  'Science answer evaluation with AI support'
                 ].map((item) => (<div key={item} className="flex items-center gap-3">
                   <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
                   <span className="font-medium">{item}</span>
                 </div>))}
               </div>
               <div className="pt-4">
-                <Button size="lg" variant="outline" className="rounded-full">
-                  Explore all features
+                <Button asChild size="lg" variant="outline" className="rounded-full">
+                  <Link to="/login">Explore Dashboard</Link>
                 </Button>
               </div>
             </div>
@@ -169,16 +184,16 @@ const PublicHome = () => {
           <div className="bg-primary text-primary-foreground rounded-3xl p-8 md:p-16 text-center relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-full bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.1)_50%,transparent_75%,transparent_100%)] bg-[length:250%_250%] animate-[shimmer_3s_infinite]" />
 
-            <h2 className="text-3xl md:text-5xl font-bold mb-6 relative z-10 tracking-tight">Experience Modern Education</h2>
+            <h2 className="text-3xl md:text-5xl font-bold mb-6 relative z-10 tracking-tight">Ready to Run Your LMS Efficiently?</h2>
             <p className="text-primary-foreground/90 text-xl mb-10 max-w-2xl mx-auto relative z-10 font-medium">
-              Join the revolution in educational technology. Bring powerful AI Answer Analysis to your school today.
+              Launch your institute workflow with role-based access, smart payment handling, and AI-assisted science evaluation.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center relative z-10">
               <Button asChild size="lg" variant="secondary" className="h-14 px-8 text-lg rounded-full text-primary font-bold shadow-lg">
                 <Link to="/register">Get Started for Free</Link>
               </Button>
               <Button asChild size="lg" variant="outline" className="h-14 px-8 text-lg rounded-full bg-transparent border-primary-foreground/30 hover:bg-primary-foreground/10 text-primary-foreground">
-                <Link to="/login">Contact Sales</Link>
+                <Link to="/login">Sign In</Link>
               </Button>
             </div>
           </div>
@@ -204,19 +219,19 @@ const PublicHome = () => {
           <div>
             <h3 className="font-semibold mb-4">Product</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><a href="#" className="hover:text-primary">Features</a></li>
-              <li><a href="#" className="hover:text-primary">Pricing</a></li>
-              <li><a href="#" className="hover:text-primary">Integrations</a></li>
-              <li><a href="#" className="hover:text-primary">Roadmap</a></li>
+              <li><a href="#features" className="hover:text-primary">Features</a></li>
+              <li><Link to="/login" className="hover:text-primary">Payments</Link></li>
+              <li><Link to="/login" className="hover:text-primary">Science Analyst</Link></li>
+              <li><Link to="/login" className="hover:text-primary">Reports</Link></li>
             </ul>
           </div>
           <div>
             <h3 className="font-semibold mb-4">Company</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><a href="#" className="hover:text-primary">About Us</a></li>
-              <li><a href="#" className="hover:text-primary">Careers</a></li>
-              <li><a href="#" className="hover:text-primary">Blog</a></li>
-              <li><a href="#" className="hover:text-primary">Contact</a></li>
+              <li><Link to="/login" className="hover:text-primary">Institute Login</Link></li>
+              <li><Link to="/login" className="hover:text-primary">Teacher Login</Link></li>
+              <li><Link to="/login" className="hover:text-primary">Student Login</Link></li>
+              <li><Link to="/register" className="hover:text-primary">Create Account</Link></li>
             </ul>
           </div>
         </div>

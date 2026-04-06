@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSidebar } from '@/contexts/SidebarContext';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, BookOpen, Users, GraduationCap, ClipboardList, Calendar, CreditCard, Video, BarChart3, Settings, LogOut, ChevronLeft, ChevronRight, Shield, Menu, X, UserCog, Layers, Bell, MessageSquare, Landmark, Plug, ChevronDown, Plus, Eye, Brain } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Users, GraduationCap, ClipboardList, Calendar, CreditCard, Video, BarChart3, Settings, LogOut, ChevronLeft, ChevronRight, Shield, Menu, X, UserCog, Layers, Bell, MessageSquare, Landmark, ChevronDown, Plus, Eye, Brain } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const adminMenuItems = [
@@ -25,6 +26,7 @@ const adminMenuItems = [
     ]
   },
   { label: 'Students', icon: Users, path: '/app/students' },
+  { label: 'Manage Classes', icon: GraduationCap, path: '/app/classes' },
   {
     label: 'Manage Exams',
     icon: ClipboardList,
@@ -34,7 +36,6 @@ const adminMenuItems = [
     ]
   },
   { label: 'Student Attendance', icon: Calendar, path: '/app/attendance' },
-  { label: 'Schedule', icon: Calendar, path: '/app/schedule' },
   { label: 'Release Zoom Account', icon: Video, path: '/app/zoom' },
   { label: 'Special Notification', icon: Bell, path: '/app/notifications' },
   {
@@ -59,7 +60,6 @@ const adminMenuItems = [
     ]
   },
   { label: 'Reports', icon: BarChart3, path: '/app/reports' },
-  { label: 'Integrations', icon: Plug, path: '/app/integrations' },
   { label: 'Science AI Analyst', icon: Brain, path: '/app/science-analyst' },
   { label: 'Settings', icon: Settings, path: '/app/settings' },
 ];
@@ -74,7 +74,6 @@ const menuItems = {
     { label: 'Students', icon: Users, path: '/app/students' },
     { label: 'Exams', icon: ClipboardList, path: '/app/exams' },
     { label: 'Attendance', icon: Calendar, path: '/app/attendance' },
-    { label: 'Schedule', icon: Calendar, path: '/app/schedule' },
     { label: 'Zoom Classes', icon: Video, path: '/app/zoom' },
     { label: 'Notifications', icon: Bell, path: '/app/notifications' },
     { label: 'Reports', icon: BarChart3, path: '/app/reports' },
@@ -84,9 +83,9 @@ const menuItems = {
   student: [
     { label: 'Dashboard', icon: LayoutDashboard, path: '/app/dashboard' },
     { label: 'My Courses', icon: BookOpen, path: '/app/courses' },
-    { label: 'Exams', icon: GraduationCap, path: '/app/exams' },
+    { label: 'Classes', icon: Layers, path: '/app/classes' },
+    { label: 'Exams', icon: ClipboardList, path: '/app/exams' },
     { label: 'Attendance', icon: Calendar, path: '/app/attendance' },
-    { label: 'Schedule', icon: Calendar, path: '/app/schedule' },
     { label: 'Zoom Classes', icon: Video, path: '/app/zoom' },
     { label: 'Notifications', icon: Bell, path: '/app/notifications' },
     { label: 'Payments', icon: CreditCard, path: '/app/payments' },
@@ -97,9 +96,9 @@ const menuItems = {
 
 export const Sidebar = () => {
   const { user, logout } = useAuth();
+  const { collapsed, setCollapsed } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
-  const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openMenus, setOpenMenus] = useState({});
 
@@ -188,9 +187,6 @@ export const Sidebar = () => {
     <div className={cn("flex flex-col h-full bg-sidebar border-r border-sidebar-border transition-all duration-300", collapsed ? "w-[72px]" : "w-64")}>
       {/* Header */}
       <div className="flex items-center gap-3 p-4 border-b border-sidebar-border">
-        <div className="w-9 h-9 rounded-lg gradient-primary flex items-center justify-center flex-shrink-0">
-          <Shield className="w-5 h-5 text-primary-foreground" />
-        </div>
         {!collapsed && (
           <div className="overflow-hidden">
             <h1 className="font-bold text-sm text-sidebar-foreground truncate">Modernistic LMS</h1>

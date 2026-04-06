@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLmsData } from '@/contexts/LmsDataContext';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -10,14 +11,15 @@ import { MonitorX, CalendarDays, User, GraduationCap } from 'lucide-react';
 
 const Finance = ({ view = 'class' }) => {
   const { user } = useAuth();
+  const { classes, users, classEnrollments, payments } = useLmsData();
   const [selectedMonth, setSelectedMonth] = useState('2023/August');
-  const [selectedTeacher, setSelectedTeacher] = useState('');
-  const [selectedClass, setSelectedClass] = useState('');
+  const [selectedTeacher, setSelectedTeacher] = useState('all');
+  const [selectedClass, setSelectedClass] = useState('all');
 
   if (!user) return <Navigate to="/login" />;
 
   // Authorization check
-  if (user.role !== 'admin') return <Navigate to="/app" />;
+  if (user.role !== 'admin' && user.role !== 'institute') return <Navigate to="/app" />;
 
   const getTitle = () => {
     switch (view) {
@@ -29,13 +31,44 @@ const Finance = ({ view = 'class' }) => {
     }
   };
 
-  // Mock data based on the image
-  const classFinanceData = [
-    { id: 1, teacher: 'Emma Johnson', enrolled: 0, unenrolled: 0, card: 0, deposits: 0, manual: 0, total: 0 },
-    { id: 2, teacher: 'Emily Roberts', enrolled: 0, unenrolled: 0, card: 0, deposits: 0, manual: 0, total: 0 },
-    { id: 3, teacher: 'James Martinez', enrolled: 0, unenrolled: 0, card: 0, deposits: 0, manual: 0, total: 0 },
-    { id: 4, teacher: 'Samuel Wilson', enrolled: 0, unenrolled: 0, card: 0, deposits: 0, manual: 0, total: 0 },
-  ];
+  const teachers = users.filter((u) => u.role === 'teacher');
+  const safeClasses = Array.isArray(classes) ? classes : [];
+  const safePayments = Array.isArray(payments) ? payments : [];
+  const safeEnrollments = Array.isArray(classEnrollments) ? classEnrollments : [];
+
+  // Calculate real data from system
+  const classFinanceData = safeClasses
+    .filter(c => selectedTeacher === 'all' || selectedTeacher === '' || String(c.teacher?.id ?? c.teacherId) === selectedTeacher)
+    .filter(c => selectedClass === 'all' || selectedClass === '' || String(c.id) === selectedClass)
+    .map(c => {
+      const teacherName = c.teacher?.name || teachers.find(t => t.id === c.teacherId)?.name || 'Unknown';
+      const enrolled = c.studentIds?.length || 0;
+      
+      const classPayments = safePayments.filter(p => p.courseId === c.id || p.classId === c.id);
+      
+      const card = classPayments.filter(p => (p.method || '').toLowerCase().includes('card') || (p.method || '').toLowerCase().includes('stripe'))
+        .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+        
+      const deposits = classPayments.filter(p => (p.method || '').toLowerCase().includes('bank') || (p.method || '').toLowerCase().includes('deposit'))
+        .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+        
+      const manual = classPayments.filter(p => !p.method || (p.method || '').toLowerCase().includes('cash') || (p.method || '').toLowerCase().includes('manual'))
+        .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+        
+      const total = card + deposits + manual;
+
+      return {
+        id: c.id,
+        name: c.name,
+        teacher: teacherName,
+        enrolled,
+        unenrolled: 0,
+        card,
+        deposits,
+        manual,
+        total
+      };
+  });
 
   const renderClassFinance = () => (
     <div className="space-y-6">
@@ -57,11 +90,13 @@ const Finance = ({ view = 'class' }) => {
           <User className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground z-10" />
           <Select value={selectedTeacher} onValueChange={setSelectedTeacher}>
             <SelectTrigger className="bg-background pl-9 h-10 border-input shadow-sm">
-              <SelectValue placeholder="Select Teacher" />
+              <SelectValue placeholder="All Teachers" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="t1">Emma Johnson</SelectItem>
-              <SelectItem value="t2">Emily Roberts</SelectItem>
+              <SelectItem value="all">All Teachers</SelectItem>
+              {teachers.map(t => (
+                <SelectItem key={`t-${t.id}`} value={String(t.id)}>{t.name}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -69,11 +104,13 @@ const Finance = ({ view = 'class' }) => {
           <GraduationCap className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground z-10" />
           <Select value={selectedClass} onValueChange={setSelectedClass}>
             <SelectTrigger className="bg-background pl-9 h-10 border-input shadow-sm">
-              <SelectValue placeholder="Select Class" />
+              <SelectValue placeholder="All Classes" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="c1">Class A</SelectItem>
-              <SelectItem value="c2">Class B</SelectItem>
+              <SelectItem value="all">All Classes</SelectItem>
+              {safeClasses.map(c => (
+                <SelectItem key={`c-${c.id}`} value={String(c.id)}>{c.name}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -85,10 +122,9 @@ const Finance = ({ view = 'class' }) => {
           <Table>
             <TableHeader className="bg-muted/30">
               <TableRow className="hover:bg-transparent border-b border-border">
-                <TableHead className="text-xs font-semibold text-foreground uppercase tracking-wider h-11 w-[5%] pl-6">Id</TableHead>
+                <TableHead className="text-xs font-semibold text-foreground uppercase tracking-wider h-11 w-[15%] pl-6">Class Name</TableHead>
                 <TableHead className="text-xs font-semibold text-foreground uppercase tracking-wider h-11 w-[20%]">Teacher</TableHead>
                 <TableHead className="text-xs font-semibold text-foreground uppercase tracking-wider h-11 w-[15%]">Enrolled Students</TableHead>
-                <TableHead className="text-xs font-semibold text-foreground uppercase tracking-wider h-11 w-[15%]">Unenrolled Students</TableHead>
                 <TableHead className="text-xs font-semibold text-foreground uppercase tracking-wider h-11 w-[10%]">Card</TableHead>
                 <TableHead className="text-xs font-semibold text-foreground uppercase tracking-wider h-11 w-[10%]">Deposits</TableHead>
                 <TableHead className="text-xs font-semibold text-foreground uppercase tracking-wider h-11 w-[12%]">Manual Enroll</TableHead>
@@ -96,16 +132,19 @@ const Finance = ({ view = 'class' }) => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {classFinanceData.map((row) => (
+              {classFinanceData.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No financial data matches your filters.</TableCell>
+                </TableRow>
+              ) : classFinanceData.map((row) => (
                 <TableRow key={row.id} className="hover:bg-muted/40 transition-colors">
-                  <TableCell className="text-sm pl-6 py-4">{row.id}</TableCell>
+                  <TableCell className="text-sm font-medium pl-6 py-4">{row.name}</TableCell>
                   <TableCell className="text-sm font-medium text-foreground py-4">{row.teacher}</TableCell>
                   <TableCell className="text-sm text-muted-foreground py-4">{row.enrolled}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground py-4">{row.unenrolled}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground py-4">{row.card}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground py-4">{row.deposits}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground py-4">{row.manual}</TableCell>
-                  <TableCell className="text-sm text-foreground font-medium text-right pr-6 py-4">{row.total}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground py-4">Rs {row.card.toLocaleString()}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground py-4">Rs {row.deposits.toLocaleString()}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground py-4">Rs {row.manual.toLocaleString()}</TableCell>
+                  <TableCell className="text-sm text-foreground font-medium text-right pr-6 py-4">Rs {row.total.toLocaleString()}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -144,17 +183,120 @@ const Finance = ({ view = 'class' }) => {
     </div>
   );
 
-  const renderEmptyState = (title) => (
-    <div className="flex flex-col items-center justify-center p-12 bg-card rounded-xl border border-dashed text-center min-h-[400px]">
-      <div className="w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center mb-4">
-        <MonitorX className="w-8 h-8 opacity-50" />
-      </div>
-      <h3 className="text-lg font-semibold text-foreground">No Data for {title}</h3>
-      <p className="text-sm text-muted-foreground max-w-xs mt-1">
-        There are no financial records to display for this category yet.
-      </p>
+  const { courses, lessons, sms } = useLmsData();
+  const safeCourses = Array.isArray(courses) ? courses : [];
+  const safeLessons = Array.isArray(lessons) ? lessons : [];
+  const safeSms = Array.isArray(sms) ? sms : [];
+
+  const renderCourseFinance = () => (
+    <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader className="bg-muted/30">
+              <TableRow className="hover:bg-transparent border-b border-border">
+                <TableHead className="text-xs font-semibold text-foreground uppercase tracking-wider h-11 pl-6">Course Name</TableHead>
+                <TableHead className="text-xs font-semibold text-foreground uppercase tracking-wider h-11">Teacher</TableHead>
+                <TableHead className="text-xs font-semibold text-foreground uppercase tracking-wider h-11">Enrolled (Approx)</TableHead>
+                <TableHead className="text-xs font-semibold text-foreground uppercase tracking-wider h-11">Total Fee</TableHead>
+                <TableHead className="text-xs font-semibold text-foreground uppercase tracking-wider h-11 text-right pr-6">Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {safeCourses.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No course financial records found.</TableCell>
+                </TableRow>
+              ) : safeCourses.map((c) => (
+                <TableRow key={c.id} className="hover:bg-muted/40 transition-colors">
+                  <TableCell className="text-sm font-medium pl-6 py-4">{c.title || c.name || `Course ${c.id}`}</TableCell>
+                  <TableCell className="text-sm text-foreground py-4">{teachers.find(t => t.id === c.teacherId || t.id === c.currentTeacherId)?.name || 'Unknown'}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground py-4">{c.studentIds?.length || 0}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground py-4">Rs {(Number(c.totalFee) || 0).toLocaleString()}</TableCell>
+                  <TableCell className="text-sm font-medium text-right pr-6 py-4">{c.status || c.courseOnGoingStatus || 'Active'}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
     </div>
   );
+
+  const renderLessonFinance = () => (
+    <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader className="bg-muted/30">
+              <TableRow className="hover:bg-transparent border-b border-border">
+                <TableHead className="text-xs font-semibold text-foreground uppercase tracking-wider h-11 pl-6">Lesson Title</TableHead>
+                <TableHead className="text-xs font-semibold text-foreground uppercase tracking-wider h-11">Course</TableHead>
+                <TableHead className="text-xs font-semibold text-foreground uppercase tracking-wider h-11">Created</TableHead>
+                <TableHead className="text-xs font-semibold text-foreground uppercase tracking-wider h-11 text-right pr-6">Access</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {safeLessons.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">No lesson financial records found.</TableCell>
+                </TableRow>
+              ) : safeLessons.map((l) => (
+                <TableRow key={l.id} className="hover:bg-muted/40 transition-colors">
+                  <TableCell className="text-sm font-medium pl-6 py-4">{l.title}</TableCell>
+                  <TableCell className="text-sm text-foreground py-4">{safeCourses.find(c => c.id === l.courseId)?.name || `Course ${l.courseId}`}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground py-4">{l.createdAt ? new Date(l.createdAt).toLocaleDateString() : 'N/A'}</TableCell>
+                  <TableCell className="text-sm font-medium text-right pr-6 py-4">Viewed</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+    </div>
+  );
+
+  const renderSmsFinance = () => {
+    const totalSmsCost = safeSms.length * 2.50; // Approximated Rs 2.50 per SMS
+    return (
+      <div className="space-y-4">
+        <div className="bg-card p-4 rounded-xl border shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-sm text-muted-foreground">Total SMS Messages Sent</p>
+            <p className="text-2xl font-bold">{safeSms.length}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-muted-foreground">Estimated Total Cost</p>
+            <p className="text-2xl font-bold text-primary">Rs {totalSmsCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+          </div>
+        </div>
+        <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+            <Table>
+                <TableHeader className="bg-muted/30">
+                <TableRow className="hover:bg-transparent border-b border-border">
+                    <TableHead className="text-xs font-semibold text-foreground uppercase tracking-wider h-11 pl-6">Date</TableHead>
+                    <TableHead className="text-xs font-semibold text-foreground uppercase tracking-wider h-11">Recipient</TableHead>
+                    <TableHead className="text-xs font-semibold text-foreground uppercase tracking-wider h-11">Message</TableHead>
+                    <TableHead className="text-xs font-semibold text-foreground uppercase tracking-wider h-11 text-right pr-6">Status</TableHead>
+                </TableRow>
+                </TableHeader>
+                <TableBody>
+                {safeSms.length === 0 ? (
+                    <TableRow>
+                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">No SMS logs found.</TableCell>
+                    </TableRow>
+                ) : safeSms.map((s) => (
+                    <TableRow key={s.id} className="hover:bg-muted/40 transition-colors">
+                    <TableCell className="text-sm text-muted-foreground pl-6 py-4">{s.createdAt || s.date || 'Recent'}</TableCell>
+                    <TableCell className="text-sm font-medium text-foreground py-4">{s.phoneNumber || s.recipient || 'Multiple'}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground py-4 truncate max-w-[200px]">{s.message || s.content}</TableCell>
+                    <TableCell className="text-sm font-medium text-right pr-6 py-4">{s.status || 'Sent'}</TableCell>
+                    </TableRow>
+                ))}
+                </TableBody>
+            </Table>
+            </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <AppLayout>
@@ -167,9 +309,9 @@ const Finance = ({ view = 'class' }) => {
         </div>
 
         {view === 'class' && renderClassFinance()}
-        {view === 'course' && renderEmptyState('Course Payment')}
-        {view === 'lesson' && renderEmptyState('Lesson Payments')}
-        {view === 'sms' && renderEmptyState('Sms Costs')}
+        {view === 'course' && renderCourseFinance()}
+        {view === 'lesson' && renderLessonFinance()}
+        {view === 'sms' && renderSmsFinance()}
       </div>
     </AppLayout>
   );

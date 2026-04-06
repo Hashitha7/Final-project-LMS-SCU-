@@ -12,7 +12,7 @@ try:
     PDF_SUPPORT = True
 except ImportError:
     PDF_SUPPORT = False
-    print("⚠️ pdfplumber not installed. PDF extraction disabled.")
+    print(" pdfplumber not installed. PDF extraction disabled.")
 
 # Image OCR extraction
 try:
@@ -26,13 +26,13 @@ try:
     try:
         pytesseract.get_tesseract_version()
         OCR_SUPPORT = True
-        print("✅ Tesseract OCR detected — PNG/JPG image uploads enabled!")
+        print(" Tesseract OCR detected — PNG/JPG image uploads enabled!")
     except pytesseract.TesseractNotFoundError:
         OCR_SUPPORT = False
-        print("⚠️ Tesseract binary not found. Image OCR disabled.")
+        print(" Tesseract binary not found. Image OCR disabled.")
 except ImportError:
     OCR_SUPPORT = False
-    print("⚠️ pytesseract/Pillow not installed. Image OCR disabled.")
+    print(" pytesseract/Pillow not installed. Image OCR disabled.")
 
 
 def clean_text(text):

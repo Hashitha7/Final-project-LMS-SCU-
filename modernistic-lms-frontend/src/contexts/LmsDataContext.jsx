@@ -1,12 +1,59 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import * as api from '@/lib/api';
 
-const LmsDataContext = createContext(null);
+const fallbackContext = {
+    users: [],
+    courses: [],
+    lessons: [],
+    classes: [],
+    exams: [],
+    payments: [],
+    attendanceSessions: [],
+    zoomClasses: [],
+    notifications: [],
+    sms: [],
+    assignments: [],
+    submissions: [],
+    upsertUser: async () => { },
+    deleteUser: async () => { },
+    upsertCourse: async () => { },
+    createCourseZoomMeeting: async () => ({}),
+    deleteCourse: async () => { },
+    upsertLesson: async () => { },
+    deleteLesson: async () => { },
+    upsertClass: async () => { },
+    deleteClass: async () => { },
+    upsertExam: async () => { },
+    deleteExam: async () => { },
+    upsertPayment: async () => { },
+    setPaymentStatus: async () => { },
+    attachDepositSlip: async () => { },
+    upsertAttendanceSession: async () => { },
+    upsertZoomClass: async () => { },
+    deleteZoomClass: async () => { },
+    upsertNotification: async () => { },
+    markNotificationRead: async () => { },
+    sendSms: async () => ({ status: 'failed' }),
+    upsertAssignment: async () => { },
+    deleteAssignment: async () => { },
+    submitAssignment: async () => ({}),
+    gradeSubmission: async () => { },
+    enrollInClass: async () => ({}),
+    unenrollFromClass: async () => {},
+    classEnrollments: [],
+    examAttempts: [],
+    resetDemoData: () => { },
+    saveExamAttempt: async () => ({}),
+    reviewExamAttempt: async () => ({}),
+    refreshExamAttempts: async () => {},
+    toggleIntegration: () => { },
+};
+
+const LmsDataContext = createContext(fallbackContext);
 
 export const useLmsData = () => {
     const ctx = useContext(LmsDataContext);
-    if (!ctx) throw new Error('useLmsData must be used within LmsDataProvider');
-    return ctx;
+    return ctx || fallbackContext;
 };
 
 export const LmsDataProvider = ({ children }) => {
@@ -15,6 +62,7 @@ export const LmsDataProvider = ({ children }) => {
     const [lessons, setLessons] = useState([]);
     const [classes, setClasses] = useState([]);
     const [exams, setExams] = useState([]);
+    const [examAttempts, setExamAttempts] = useState([]);
     const [payments, setPayments] = useState([]);
     const [attendance, setAttendance] = useState([]);
     const [zoomClasses, setZoomClasses] = useState([]);
@@ -22,13 +70,20 @@ export const LmsDataProvider = ({ children }) => {
     const [sms, setSms] = useState([]);
     const [assignments, setAssignments] = useState([]);
     const [submissions, setSubmissions] = useState([]);
+    const [classEnrollments, setClassEnrollments] = useState([]);
 
     // Refresh functions
-    const refreshUsers = () => api.users.getAll().then(setUsers);
+    const refreshUsers = () => api.users.getAll().then(setUsers).catch(() => setUsers([]));
     const refreshCourses = () => api.courses.getAll().then(setCourses);
-    const refreshLessons = () => api.lessons.getAll().then(setLessons);
+    const refreshLessons = () => api.lessons.getAll().then(data => {
+        setLessons(data.map(l => {
+            try { return { ...l, resources: l.resourcesJson ? JSON.parse(l.resourcesJson) : [] }; }
+            catch (e) { return { ...l, resources: [] }; }
+        }));
+    });
     const refreshClasses = () => api.classes.getAll().then(setClasses);
     const refreshExams = () => api.exams.getAll().then(setExams);
+    const refreshExamAttempts = () => api.examSubmissions.getAll().then(setExamAttempts).catch(() => setExamAttempts([]));
     const refreshPayments = () => api.payments.getAll().then(setPayments);
     const refreshAttendance = () => api.attendance.getAll().then(setAttendance);
     const refreshZoom = () => api.zoomClasses.getAll().then(setZoomClasses);
@@ -36,28 +91,44 @@ export const LmsDataProvider = ({ children }) => {
     const refreshSms = () => api.sms.getAll().then(setSms);
     const refreshAssignments = () => api.assignments.getAll().then(setAssignments);
     const refreshSubmissions = () => api.submissions.getAll().then(setSubmissions);
+    const refreshClassEnrollments = () => api.classEnrollments.getAll().then(setClassEnrollments);
 
     // Initial Load - only load data if user is authenticated
     useEffect(() => {
         // Check if user has auth token
         const token = localStorage.getItem('eduflow-auth-token');
+        let role = '';
+        try {
+            const rawUser = localStorage.getItem('eduflow-auth-user');
+            role = rawUser ? (JSON.parse(rawUser)?.role || '').toLowerCase() : '';
+        } catch {
+            role = '';
+        }
 
         // Only load data if authenticated
         if (token) {
-            Promise.all([
-                refreshUsers(),
+            const tasks = [
                 refreshCourses(),
                 refreshLessons(),
                 refreshClasses(),
                 refreshExams(),
+                refreshExamAttempts(),
                 refreshPayments(),
                 refreshAttendance(),
                 refreshZoom(),
                 refreshNotifications(),
                 refreshSms(),
                 refreshAssignments(),
-                refreshSubmissions()
-            ]).catch(err => {
+                refreshSubmissions(),
+                refreshClassEnrollments()
+            ];
+
+            // /api/teachers requires institute authority in backend.
+            if (role === 'admin' || role === 'institute') {
+                tasks.unshift(refreshUsers());
+            }
+
+            Promise.all(tasks).catch(err => {
                 console.error("Failed to load initial data", err);
                 // If we get 401, the token is invalid - clear it
                 if (err?.response?.status === 401) {
@@ -80,6 +151,7 @@ export const LmsDataProvider = ({ children }) => {
         sms,
         assignments,
         submissions,
+        classEnrollments,
 
         upsertUser: async (user) => { await api.users.create(user); refreshUsers(); },
         deleteUser: async (id, role) => { await api.users.delete(id, role); refreshUsers(); },
@@ -92,13 +164,19 @@ export const LmsDataProvider = ({ children }) => {
             }
             refreshCourses();
         },
+        createCourseZoomMeeting: async (courseId) => {
+            const updated = await api.courses.autoCreateZoomMeeting(courseId);
+            refreshCourses();
+            return updated;
+        },
         deleteCourse: async (id) => { await api.courses.delete(id); refreshCourses(); },
 
         upsertLesson: async (lesson) => {
+            const payload = { ...lesson, resourcesJson: JSON.stringify(lesson.resources || []) };
             if (lesson.id) {
-                await api.lessons.update(lesson.id, lesson);
+                await api.lessons.update(lesson.id, payload);
             } else {
-                await api.lessons.create(lesson);
+                await api.lessons.create(payload);
             }
             refreshLessons();
         },
@@ -107,14 +185,35 @@ export const LmsDataProvider = ({ children }) => {
         upsertClass: async (cls) => { await api.classes.create(cls); refreshClasses(); },
         deleteClass: async (id) => { await api.classes.delete(id); refreshClasses(); },
 
+        enrollInClass: async (studentId, classId, enrollType) => {
+            const result = await api.classEnrollments.enroll({ studentId, classId, enrollType });
+            refreshClassEnrollments();
+            return result;
+        },
+        unenrollFromClass: async (enrollmentId) => {
+            await api.classEnrollments.delete(enrollmentId);
+            refreshClassEnrollments();
+        },
+
         upsertExam: async (exam) => { await api.exams.create(exam); refreshExams(); },
         deleteExam: async (id) => { await api.exams.delete(id); refreshExams(); },
 
-        upsertPayment: async (payment) => { await api.payments.create(payment); refreshPayments(); },
+        upsertPayment: async (payment) => {
+            if (payment.id) {
+                await api.payments.update(payment.id, payment);
+            } else {
+                await api.payments.create(payment);
+            }
+            refreshPayments();
+        },
         setPaymentStatus: async (paymentId, status, refundReason) => {
             const payment = payments.find(p => p.id === paymentId);
             if (payment) {
-                await api.payments.create({ ...payment, status, refundReason: status === 'refunded' ? refundReason : payment.refundReason });
+                await api.payments.update(payment.id, {
+                    ...payment,
+                    status,
+                    refundReason: status === 'refunded' ? refundReason : payment.refundReason
+                });
                 refreshPayments();
             }
         },
@@ -122,7 +221,7 @@ export const LmsDataProvider = ({ children }) => {
             // In a real app we would upload the file. For now just updating metadata.
             const payment = payments.find(p => p.id === paymentId);
             if (payment) {
-                await api.payments.create({ ...payment, depositSlip: filename }); // Simplified
+                await api.payments.update(payment.id, { ...payment, depositSlip: filename });
                 refreshPayments();
             }
         },
@@ -146,9 +245,17 @@ export const LmsDataProvider = ({ children }) => {
         },
 
         sendSms: async (to, body) => {
-            await api.sms.create({ recipient: to, message: body, status: 'sent', sentAt: new Date().toISOString() });
+            const payload = {
+                mobile: to,
+                message: body,
+                smsBody: body,
+                status: 'Delivered',
+                typeOfSms: 'Campaign',
+                institute: { id: 1 }
+            };
+            await api.sms.create(payload);
             refreshSms();
-            return { status: 'sent' }; // Compatible return
+            return { status: 'sent' };
         },
 
         upsertAssignment: async (a) => { await api.assignments.create(a); refreshAssignments(); },
@@ -168,13 +275,18 @@ export const LmsDataProvider = ({ children }) => {
             }
         },
 
-        // Mock remaining
-        integrations: [],
-        examAttempts: [],
-
-        resetDemoData: () => console.log("Reset not supported in backend mode"),
-        saveExamAttempt: () => { },
-        toggleIntegration: () => { },
+        examAttempts,
+        saveExamAttempt: async (attempt) => {
+            const created = await api.examSubmissions.create(attempt);
+            await refreshExamAttempts();
+            return created;
+        },
+        reviewExamAttempt: async (id, reviewPayload) => {
+            const updated = await api.examSubmissions.review(id, reviewPayload);
+            await refreshExamAttempts();
+            return updated;
+        },
+        refreshExamAttempts,
     };
 
     return <LmsDataContext.Provider value={value}>{children}</LmsDataContext.Provider>;

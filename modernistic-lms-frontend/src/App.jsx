@@ -6,6 +6,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { I18nProvider } from '@/contexts/I18nContext';
 import { LmsDataProvider } from '@/contexts/LmsDataContext';
+import { SidebarProvider } from '@/contexts/SidebarContext';
 import { ThemeProvider } from '@/components/theme/ThemeProvider';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import PublicHome from './pages/PublicHome';
@@ -22,14 +23,15 @@ import Students from './pages/Students';
 import Exams from './pages/Exams';
 import AddPaper from './pages/AddPaper';
 import ExamTake from './pages/ExamTake';
+import ExamReview from './pages/ExamReview';
 import Attendance from './pages/Attendance';
-import Schedule from './pages/Schedule';
+
 import Payments from './pages/Payments';
 import Finance from './pages/Finance';
 import ZoomClasses from './pages/ZoomClasses';
 import Notifications from './pages/Notifications';
 import SMS from './pages/SMS';
-import Integrations from './pages/Integrations';
+
 import Reports from './pages/Reports';
 // import UserManagement from './pages/UserManagement';
 import Teachers from './pages/Teachers';
@@ -45,9 +47,10 @@ const App = () => (<ErrorBoundary>
       <LmsDataProvider>
         <I18nProvider>
           <AuthProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
+            <SidebarProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Sonner />
               <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                 <Routes>
                   <Route path="/" element={<PublicHome />} />
@@ -67,8 +70,9 @@ const App = () => (<ErrorBoundary>
                   <Route path="/app/exams/add" element={<AddPaper />} />
                   <Route path="/app/exams" element={<Exams />} />
                   <Route path="/app/exams/take/:examId" element={<ExamTake />} />
+                  <Route path="/app/exams/review" element={<ExamReview />} />
                   <Route path="/app/attendance" element={<Attendance />} />
-                  <Route path="/app/schedule" element={<Schedule />} />
+
                   <Route path="/app/payments" element={<Payments />} />
                   <Route path="/app/finance" element={<Navigate to="/app/finance/class" replace />} />
                   <Route path="/app/finance/class" element={<Finance view="class" />} />
@@ -82,7 +86,7 @@ const App = () => (<ErrorBoundary>
                   <Route path="/app/sms/lesson" element={<SMS view="lesson" />} />
                   <Route path="/app/sms/course" element={<SMS view="course" />} />
                   <Route path="/app/sms/custom" element={<SMS view="custom" />} />
-                  <Route path="/app/integrations" element={<Integrations />} />
+
                   <Route path="/app/reports" element={<Reports />} />
                   {/* <Route path="/app/users" element={<UserManagement />} /> */}
                   <Route path="/app/teachers" element={<Teachers />} />
@@ -102,6 +106,7 @@ const App = () => (<ErrorBoundary>
                 </Routes>
               </BrowserRouter>
             </TooltipProvider>
+            </SidebarProvider>
           </AuthProvider>
         </I18nProvider>
       </LmsDataProvider>

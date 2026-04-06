@@ -123,10 +123,10 @@ public class EmailService {
 
             helper.setText(html, true);
             mailSender.send(message);
-            log.info("✅ Welcome email sent to teacher: {}", toEmail);
+            log.info(" Welcome email sent to teacher: {}", toEmail);
 
         } catch (Exception e) {
-            log.error("❌ Failed to send welcome email to {}: {}", toEmail, e.getMessage());
+            log.error(" Failed to send welcome email to {}: {}", toEmail, e.getMessage());
         }
     }
 
@@ -228,10 +228,10 @@ public class EmailService {
 
             helper.setText(html, true);
             mailSender.send(message);
-            log.info("✅ Institute notification sent to: {}", recipient);
+            log.info(" Institute notification sent to: {}", recipient);
 
         } catch (Exception e) {
-            log.error("❌ Failed to send institute notification: {}", e.getMessage());
+            log.error(" Failed to send institute notification: {}", e.getMessage());
         }
     }
 }

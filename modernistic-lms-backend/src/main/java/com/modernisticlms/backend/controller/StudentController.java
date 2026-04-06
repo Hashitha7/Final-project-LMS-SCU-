@@ -4,6 +4,7 @@ import com.modernisticlms.backend.model.Student;
 import com.modernisticlms.backend.repository.StudentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -20,11 +21,13 @@ public class StudentController {
     private PasswordEncoder passwordEncoder;
 
     @GetMapping
+    @PreAuthorize("hasAnyAuthority('INSTITUTE','TEACHER')")
     public List<Student> getAllStudents() {
         return studentRepository.findAll();
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('INSTITUTE','TEACHER','STUDENT')")
     public ResponseEntity<Student> getStudentById(@PathVariable Long id) {
         return studentRepository.findById(id)
                 .map(ResponseEntity::ok)
@@ -32,6 +35,7 @@ public class StudentController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('INSTITUTE')")
     public ResponseEntity<Student> createStudent(@RequestBody Student student) {
         if (student.getPassword() != null) {
             student.setPassword(passwordEncoder.encode(student.getPassword()));
@@ -40,6 +44,7 @@ public class StudentController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('INSTITUTE','STUDENT')")
     public ResponseEntity<Student> updateStudent(@PathVariable Long id, @RequestBody Student updated) {
         return studentRepository.findById(id).map(student -> {
             student.setName(updated.getName());
@@ -61,6 +66,7 @@ public class StudentController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('INSTITUTE')")
     public ResponseEntity<Void> deleteStudent(@PathVariable Long id) {
         studentRepository.deleteById(id);
         return ResponseEntity.noContent().build();

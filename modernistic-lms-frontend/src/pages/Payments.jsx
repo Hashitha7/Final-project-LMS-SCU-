@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { PageHeader, StatCard } from '@/components/shared/StatCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,165 +11,196 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/components/ui/sonner';
-import { DollarSign, CreditCard, Download, Plus, TrendingUp, Upload, Landmark, Wifi } from 'lucide-react';
+import { DollarSign, CreditCard, Download, Plus, TrendingUp, Upload, Landmark, ShieldCheck, ReceiptText } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLmsData } from '@/contexts/LmsDataContext';
 import { uid } from '@/lib/storage';
 
-// ── PayHere Sandbox Config ────────────────────────────────────────────────────
-const PAYHERE_MERCHANT_ID     = '4OVybuypHIe4JH5Fx67puF3Xc';
-const PAYHERE_MERCHANT_SECRET = '4JAIWxxlWcz8MR4g3VugXw8QmVe8yyAO94fSsSuRlXRh';
-const PAYHERE_SANDBOX         = true;
-
-// Generate MD5 hash for PayHere (frontend-friendly, demo only — in production hash on backend)
-async function generatePayHereHash(merchantId, orderId, amount, currency, secret) {
-  const upperSecret = secret.toUpperCase();
-  const data = `${merchantId}${orderId}${amount}${currency}${upperSecret}`;
-  const msgBuffer = new TextEncoder().encode(data);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
-}
-
-async function initiatePayHerePayment({ studentName, studentEmail, studentPhone, amount, orderId, itemName }) {
-  const currency = 'LKR';
-  const hash = await generatePayHereHash(
-    PAYHERE_MERCHANT_ID,
-    orderId,
-    parseFloat(amount).toFixed(2),
-    currency,
-    btoa(PAYHERE_MERCHANT_SECRET) // demo only
-  );
-
-  const baseUrl = PAYHERE_SANDBOX
-    ? 'https://sandbox.payhere.lk/pay/checkout'
-    : 'https://www.payhere.lk/pay/checkout';
-
-  const form = document.createElement('form');
-  form.method = 'POST';
-  form.action = baseUrl;
-  form.target = '_blank'; // open in new tab
-
-  const fields = {
-    merchant_id:    PAYHERE_MERCHANT_ID,
-    return_url:     window.location.href,
-    cancel_url:     window.location.href,
-    notify_url:     'http://localhost:8080/api/payments/payhere-notify', // backend endpoint
-    order_id:       orderId,
-    items:          itemName,
-    amount:         parseFloat(amount).toFixed(2),
-    currency,
-    hash,
-    first_name:     studentName.split(' ')[0] || studentName,
-    last_name:      studentName.split(' ')[1] || '',
-    email:          studentEmail,
-    phone:          studentPhone,
-    address:        'Modernistic LMS',
-    city:           'Colombo',
-    country:        'Sri Lanka',
-  };
-
-  Object.entries(fields).forEach(([key, val]) => {
-    const input = document.createElement('input');
-    input.type  = 'hidden';
-    input.name  = key;
-    input.value = val;
-    form.appendChild(input);
-  });
-
-  document.body.appendChild(form);
-  form.submit();
-  document.body.removeChild(form);
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-
 const Payments = () => {
   const { user } = useAuth();
-  const { payments, courses, users, upsertPayment, attachDepositSlip } = useLmsData();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { payments, courses, users, upsertPayment, setPaymentStatus, attachDepositSlip } = useLmsData();
 
   if (!user) return <Navigate to="/login"/>;
 
+  const isStudent = user.role === 'student';
+  const isFinanceManager = ['admin', 'institute'].includes(user.role);
+
   const visiblePayments = useMemo(() => {
-    if (user.role === 'student') return payments.filter(p => p.studentId === user.id);
+    if (isStudent) return payments.filter(p => p.studentId === user.id);
     return payments;
-  }, [payments, user.id, user.role]);
+  }, [isStudent, payments, user.id]);
+
+  const completedCourseIds = useMemo(() => new Set(
+    payments
+      .filter((p) => p.studentId === user.id && p.status === 'completed')
+      .map((p) => String(p.courseId))
+  ), [payments, user.id]);
+
+  const studentDueCourses = useMemo(() => {
+    if (!isStudent) return [];
+    return courses.filter((c) => {
+      const id = String(c.id);
+      const fee = Number(c.fee || c.price || c.totalFee || 0);
+      const hasPending = payments.some(
+        (p) => String(p.studentId) === String(user.id) && String(p.courseId) === id && p.status === 'pending'
+      );
+
+      return fee > 0 && !completedCourseIds.has(id) && !hasPending;
+    });
+  }, [completedCourseIds, courses, isStudent, payments, user.id]);
 
   const totalRevenue  = useMemo(() =>
     payments.filter(p => p.status === 'completed').reduce((s, p) => s + Number(p.amount || 0), 0),
     [payments]
   );
 
-  // Admin/Teacher: Record Payment state
+  // Admin / Institute: Record Payment state
   const [studentId, setStudentId] = useState('');
   const [courseId,  setCourseId]  = useState('');
-  const [amount,    setAmount]    = useState(0);
+  const [amount,    setAmount]    = useState('');
   const [method,    setMethod]    = useState('offline');
 
-  // Student: PayHere online payment state
-  const [payDialogOpen, setPayDialogOpen] = useState(false);
-  const [payPhone,      setPayPhone]      = useState('');
+  // Student gateway state
+  const [gatewayOpen, setGatewayOpen] = useState(false);
   const [selectedCourseId, setSelectedCourseId] = useState('');
-  const [onlineAmount, setOnlineAmount]   = useState('');
-  const [paying, setPaying] = useState(false);
+  const [gatewayPhone, setGatewayPhone] = useState('');
+  const [cardName, setCardName] = useState(user.name || '');
+  const [cardNumber, setCardNumber] = useState('');
+  const [expiry, setExpiry] = useState('');
+  const [cvv, setCvv] = useState('');
+  const [gatewayLoading, setGatewayLoading] = useState(false);
 
-  const studentCourses = useMemo(() =>
-    courses.filter(c => !payments.some(p =>
-      p.studentId === user.id && p.courseId === c.id && p.status === 'completed'
-    )),
-    [courses, payments, user.id]
+  const selectedCourse = useMemo(
+    () => courses.find((c) => String(c.id) === String(selectedCourseId)),
+    [courses, selectedCourseId]
   );
 
-  const handleOnlinePayment = async () => {
-    if (!selectedCourseId || !onlineAmount || !payPhone) {
-      toast.error('Please fill all fields');
+  const selectedCourseAmount = useMemo(() => {
+    if (!selectedCourse) return '';
+    const amountFromCourse = Number(selectedCourse.fee || selectedCourse.price || selectedCourse.totalFee || 0);
+    return amountFromCourse > 0 ? String(amountFromCourse) : '';
+  }, [selectedCourse]);
+
+  const openGatewayForCourse = (id) => {
+    setSelectedCourseId(String(id));
+    setGatewayOpen(true);
+  };
+
+  useEffect(() => {
+    if (!isStudent) return;
+
+    const query = new URLSearchParams(location.search || '');
+    const action = query.get('action');
+    const courseId = query.get('courseId');
+    if (action !== 'pay' || !courseId) return;
+
+    const dueCourse = studentDueCourses.find((c) => String(c.id) === String(courseId));
+    if (dueCourse) {
+      setSelectedCourseId(String(dueCourse.id));
+      setGatewayOpen(true);
+      toast.message(`Checkout opened for ${dueCourse.title}`);
+    } else {
+      toast.message('This course is already paid or unavailable for payment.');
+    }
+
+    navigate('/app/payments', { replace: true });
+  }, [isStudent, location.search, navigate, studentDueCourses]);
+
+  const validateGatewayForm = () => {
+    const onlyDigits = cardNumber.replace(/\s+/g, '');
+    if (!selectedCourseId || !gatewayPhone || !cardName || !cardNumber || !expiry || !cvv) {
+      toast.error('Please fill all payment fields.');
+      return false;
+    }
+    if (!/^\d{13,19}$/.test(onlyDigits)) {
+      toast.error('Card number is invalid.');
+      return false;
+    }
+    if (!/^\d{2}\/\d{2}$/.test(expiry)) {
+      toast.error('Use expiry format MM/YY.');
+      return false;
+    }
+    if (!/^\d{3,4}$/.test(cvv)) {
+      toast.error('CVV is invalid.');
+      return false;
+    }
+    return true;
+  };
+
+  const handleStudentGatewayPayment = async () => {
+    if (!validateGatewayForm()) return;
+    setGatewayLoading(true);
+
+    const orderId = `LMS-${uid().toUpperCase()}`;
+    const amountValue = Number(selectedCourseAmount || 0);
+    if (amountValue <= 0) {
+      toast.error('Invalid amount for selected course.');
+      setGatewayLoading(false);
       return;
     }
-    const course = courses.find(c => c.id === selectedCourseId);
-    const orderId = `LMS-${uid()}`;
-    setPaying(true);
-    try {
-      // Record payment as pending first
-      const p = {
-        id: orderId,
-        studentId: user.id,
-        courseId: selectedCourseId,
-        amount: onlineAmount,
-        date: new Date().toISOString().slice(0, 10),
-        method: 'payhere',
-        status: 'pending',
-      };
-      upsertPayment(p);
 
-      await initiatePayHerePayment({
-        studentName:  user.name || 'Student',
-        studentEmail: user.email || 'student@lms.lk',
-        studentPhone: payPhone,
-        amount:       onlineAmount,
-        orderId,
-        itemName:     course?.title || 'LMS Course Fee',
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      await upsertPayment({
+        studentId: Number(user.id),
+        courseId: Number(selectedCourseId),
+        amount: amountValue,
+        method: 'card',
+        status: 'completed',
+        transactionId: orderId,
       });
-      toast.success('Redirecting to PayHere secure checkout...');
-      setPayDialogOpen(false);
+
+      toast.success(`Payment successful. Receipt: ${orderId}`);
+      setGatewayOpen(false);
+      setCardNumber('');
+      setExpiry('');
+      setCvv('');
     } catch (err) {
-      toast.error('Payment initiation failed. Please try again.');
+      toast.error('Payment failed. Please try again.');
     } finally {
-      setPaying(false);
+      setGatewayLoading(false);
     }
+  };
+
+  const recordManualPayment = async () => {
+    if (!studentId || !courseId || !amount) {
+      toast.error('Select student, course and amount.');
+      return;
+    }
+    const value = Number(amount || 0);
+    if (value <= 0) {
+      toast.error('Amount should be greater than 0.');
+      return;
+    }
+    await upsertPayment({
+      studentId: Number(studentId),
+      courseId: Number(courseId),
+      amount: value,
+      method,
+      status: method === 'offline' ? 'pending' : 'completed',
+      transactionId: method === 'card' ? `POS-${uid().slice(0, 10).toUpperCase()}` : undefined,
+    });
+    setStudentId('');
+    setCourseId('');
+    setAmount('');
+    setMethod('offline');
+    toast.success('Payment saved.');
   };
 
   return (
     <AppLayout>
       <div className="space-y-6 pt-12 lg:pt-0">
-        <PageHeader title="Payments" subtitle="Online (PayHere) & offline (deposit slip) payments">
+        <PageHeader title="Payments" subtitle="Student checkout + admin finance tracking">
 
           {/* Export */}
           <Button size="sm" variant="outline" onClick={() => toast.message('Export feature — coming soon')}>
             <Download className="w-4 h-4 mr-1"/> Export
           </Button>
 
-          {/* Admin/Teacher: record payment manually */}
-          {user.role !== 'student' && (
+          {/* Admin/Institute: record payment manually */}
+          {isFinanceManager && (
             <Dialog>
               <DialogTrigger asChild>
                 <Button size="sm" className="gradient-primary text-primary-foreground">
@@ -181,16 +212,42 @@ const Payments = () => {
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label>Student</Label>
-                    <Input value={studentId} onChange={e => setStudentId(e.target.value)} placeholder="Paste student user id" className="bg-secondary/50"/>
+                    <Select value={studentId} onValueChange={setStudentId}>
+                      <SelectTrigger className="bg-secondary/50">
+                        <SelectValue placeholder="Select student" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {users.filter((u) => u.role === 'student').map((s) => (
+                          <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label>Course</Label>
-                    <Input value={courseId} onChange={e => setCourseId(e.target.value)} placeholder="Paste course id" className="bg-secondary/50"/>
+                    <Select
+                      value={courseId}
+                      onValueChange={(value) => {
+                        setCourseId(value);
+                        const selected = courses.find((c) => String(c.id) === String(value));
+                        const selectedAmount = Number(selected?.fee || selected?.price || 0);
+                        setAmount(selectedAmount > 0 ? String(selectedAmount) : '');
+                      }}
+                    >
+                      <SelectTrigger className="bg-secondary/50">
+                        <SelectValue placeholder="Select course" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {courses.map((c) => (
+                          <SelectItem key={c.id} value={String(c.id)}>{c.title || c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Amount (LKR)</Label>
-                      <Input type="number" value={amount} onChange={e => setAmount(Number(e.target.value))} className="bg-secondary/50"/>
+                      <Input type="number" value={amount} onChange={e => setAmount(e.target.value)} className="bg-secondary/50"/>
                     </div>
                     <div className="space-y-2">
                       <Label>Method</Label>
@@ -202,36 +259,33 @@ const Payments = () => {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button className="gradient-primary text-primary-foreground" onClick={() => {
-                    if (!studentId || !courseId || !amount) { toast.error('Fill student, course and amount'); return; }
-                    const p = { id: uid(), studentId, courseId, amount, date: new Date().toISOString().slice(0, 10), method, status: method === 'offline' ? 'pending' : 'completed' };
-                    upsertPayment(p);
-                    setStudentId(''); setCourseId(''); setAmount(0); setMethod('offline');
-                    toast.success('Recorded');
-                  }}>Save</Button>
+                  <Button className="gradient-primary text-primary-foreground" onClick={recordManualPayment}>Save</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
           )}
 
-          {/* Student: Pay Online via PayHere */}
-          {user.role === 'student' && (
-            <Dialog open={payDialogOpen} onOpenChange={setPayDialogOpen}>
+          {/* Student: simulated real gateway */}
+          {isStudent && (
+            <Dialog open={gatewayOpen} onOpenChange={setGatewayOpen}>
               <DialogTrigger asChild>
-                <Button size="sm" className="bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md hover:shadow-lg">
-                  <Wifi className="w-4 h-4 mr-1"/> Pay Online (PayHere)
+                <Button size="sm" className="bg-gradient-to-r from-emerald-600 to-cyan-600 text-white shadow-md hover:shadow-lg">
+                  <ShieldCheck className="w-4 h-4 mr-1"/> Secure Checkout
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
+              <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
-                    <CreditCard className="w-5 h-5 text-orange-500"/>
-                    Pay Online via PayHere
+                    <CreditCard className="w-5 h-5 text-emerald-600"/>
+                    Modernistic Secure Payment Gateway
                   </DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
-                  <div className="bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3 text-sm text-orange-700 dark:text-orange-400">
-                    🔒 Secure payment powered by <strong>PayHere</strong> — Sri Lanka's trusted payment gateway. Supports Visa, Mastercard, and local bank cards.
+                  <div className="rounded-lg border bg-gradient-to-r from-emerald-50 to-cyan-50 dark:from-emerald-950/20 dark:to-cyan-950/20 p-3 text-sm">
+                    <div className="font-medium text-foreground flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-emerald-600" /> PCI-DSS style secure flow
+                    </div>
+                    <p className="text-muted-foreground mt-1">Card details are validated in-browser for demo checkout behavior.</p>
                   </div>
                   <div className="space-y-2">
                     <Label>Select Course</Label>
@@ -240,29 +294,47 @@ const Payments = () => {
                         <SelectValue placeholder="Choose a course to pay for"/>
                       </SelectTrigger>
                       <SelectContent>
-                        {courses.map(c => (
-                          <SelectItem key={c.id} value={c.id}>{c.title} — LKR {c.fee || '0'}</SelectItem>
+                        {studentDueCourses.map(c => (
+                          <SelectItem key={c.id} value={String(c.id)}>{c.title || c.name} - LKR {Number(c.fee || c.price || c.totalFee || 0).toLocaleString()}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
                     <Label>Amount (LKR)</Label>
-                    <Input type="number" value={onlineAmount} onChange={e => setOnlineAmount(e.target.value)} placeholder="e.g. 5000" className="bg-secondary/50"/>
+                    <Input type="text" value={selectedCourseAmount ? `LKR ${Number(selectedCourseAmount).toLocaleString()}` : ''} readOnly className="bg-secondary/40"/>
                   </div>
                   <div className="space-y-2">
-                    <Label>Your Phone Number</Label>
-                    <Input value={payPhone} onChange={e => setPayPhone(e.target.value)} placeholder="07X XXXXXXX" className="bg-secondary/50"/>
+                    <Label>Phone Number</Label>
+                    <Input value={gatewayPhone} onChange={e => setGatewayPhone(e.target.value)} placeholder="07X XXXXXXX" className="bg-secondary/50"/>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Card Holder Name</Label>
+                    <Input value={cardName} onChange={e => setCardName(e.target.value)} placeholder="Name on card" className="bg-secondary/50"/>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Card Number</Label>
+                    <Input value={cardNumber} onChange={e => setCardNumber(e.target.value)} placeholder="4111 1111 1111 1111" className="bg-secondary/50"/>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label>Expiry (MM/YY)</Label>
+                      <Input value={expiry} onChange={e => setExpiry(e.target.value)} placeholder="08/28" className="bg-secondary/50"/>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>CVV</Label>
+                      <Input value={cvv} onChange={e => setCvv(e.target.value)} placeholder="123" className="bg-secondary/50"/>
+                    </div>
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setPayDialogOpen(false)}>Cancel</Button>
+                  <Button variant="outline" onClick={() => setGatewayOpen(false)}>Cancel</Button>
                   <Button
-                    className="bg-gradient-to-r from-orange-500 to-red-500 text-white"
-                    onClick={handleOnlinePayment}
-                    disabled={paying}
+                    className="bg-gradient-to-r from-emerald-600 to-cyan-600 text-white"
+                    onClick={handleStudentGatewayPayment}
+                    disabled={gatewayLoading || studentDueCourses.length === 0}
                   >
-                    {paying ? 'Processing...' : '🔒 Proceed to PayHere'}
+                    {gatewayLoading ? 'Verifying & Charging...' : 'Confirm Secure Payment'}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -277,6 +349,28 @@ const Payments = () => {
           <StatCard title="Pending" value={payments.filter(p => p.status === 'pending').length} icon={TrendingUp}/>
         </div>
 
+        {isStudent && (
+          <Card className="glass-card">
+            <CardHeader><CardTitle className="flex items-center gap-2"><ReceiptText className="w-5 h-5" /> Due Course Payments</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              {studentDueCourses.length === 0 && (
+                <p className="text-sm text-muted-foreground">All course payments are completed.</p>
+              )}
+              {studentDueCourses.map((course) => (
+                <div key={course.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-lg border p-3">
+                  <div>
+                    <p className="font-medium text-foreground">{course.title || course.name}</p>
+                    <p className="text-sm text-muted-foreground">LKR {Number(course.fee || course.price || course.totalFee || 0).toLocaleString()}</p>
+                  </div>
+                  <Button onClick={() => openGatewayForCourse(course.id)} className="bg-gradient-to-r from-emerald-600 to-cyan-600 text-white">
+                    <CreditCard className="w-4 h-4 mr-1" /> Pay Now
+                  </Button>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Transaction Table */}
         <Card className="glass-card">
           <CardHeader><CardTitle>Transaction History</CardTitle></CardHeader>
@@ -290,22 +384,28 @@ const Payments = () => {
                   <TableHead>Date</TableHead>
                   <TableHead>Method</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Deposit Slip / Action</TableHead>
+                  <TableHead>Deposit Slip</TableHead>
+                  {isFinanceManager && <TableHead>Action</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {visiblePayments.slice().reverse().map(p => {
                   const student = users.find(u => u.id === p.studentId);
                   const course  = courses.find(c => c.id === p.courseId);
+                  const depositName = typeof p.depositSlip === 'object'
+                    ? p.depositSlip?.filename
+                    : p.depositSlip;
                   return (
                     <TableRow key={p.id}>
                       <TableCell className="font-medium text-foreground">{student?.name ?? p.studentId}</TableCell>
                       <TableCell className="text-muted-foreground">{course?.title ?? p.courseId}</TableCell>
                       <TableCell className="font-semibold text-foreground">Rs. {Number(p.amount).toLocaleString()}</TableCell>
-                      <TableCell className="text-muted-foreground">{p.date}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {p.date || (p.createdAt ? new Date(p.createdAt).toISOString().slice(0, 10) : '-')}
+                      </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="flex items-center gap-1 w-fit">
-                          {p.method === 'payhere' ? <><Wifi className="w-3 h-3 text-orange-500"/> PayHere</> :
+                          {p.method === 'card' ? <><CreditCard className="w-3 h-3 text-emerald-600"/> Card</> :
                            p.method === 'offline' ? <><Landmark className="w-3 h-3"/> Offline</> :
                            p.method}
                         </Badge>
@@ -320,11 +420,13 @@ const Payments = () => {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {p.method === 'payhere' ? (
-                          <span className="text-xs text-orange-500 font-medium">PayHere Online</span>
-                        ) : p.depositSlip ? (
-                          <span className="text-xs text-muted-foreground">{p.depositSlip.filename}</span>
-                        ) : user.role === 'student' ? (
+                        {p.method === 'card' ? (
+                          <span className="text-xs text-muted-foreground">
+                            Not required{p.transactionId ? ` (${p.transactionId})` : ''}
+                          </span>
+                        ) : depositName ? (
+                          <span className="text-xs text-muted-foreground">{depositName}</span>
+                        ) : isStudent && p.method === 'offline' && p.status === 'pending' ? (
                           <label className="inline-flex items-center gap-2 text-sm cursor-pointer">
                             <Upload className="w-4 h-4"/>
                             <input className="hidden" type="file" onChange={e => {
@@ -339,12 +441,27 @@ const Payments = () => {
                           <span className="text-xs text-muted-foreground">Awaiting slip</span>
                         )}
                       </TableCell>
+                      {isFinanceManager && (
+                        <TableCell>
+                          <div className="flex gap-2">
+                            {p.status === 'pending' && (
+                              <>
+                                <Button size="sm" onClick={() => setPaymentStatus(p.id, 'completed')}>Approve</Button>
+                                <Button size="sm" variant="outline" onClick={() => setPaymentStatus(p.id, 'failed')}>Reject</Button>
+                              </>
+                            )}
+                            {p.status === 'completed' && (
+                              <Button size="sm" variant="outline" onClick={() => setPaymentStatus(p.id, 'refunded', 'Admin initiated refund')}>Refund</Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      )}
                     </TableRow>
                   );
                 })}
                 {visiblePayments.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground py-6">No transactions yet</TableCell>
+                    <TableCell colSpan={isFinanceManager ? 8 : 7} className="text-center text-muted-foreground py-6">No transactions yet</TableCell>
                   </TableRow>
                 )}
               </TableBody>
