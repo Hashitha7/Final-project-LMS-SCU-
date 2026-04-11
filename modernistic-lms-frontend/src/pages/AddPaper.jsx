@@ -137,7 +137,7 @@ const AddPaper = () => {
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select teacher" />
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent className="bg-blue-50 [&_[data-highlighted]]:bg-blue-200 [&_[data-highlighted]]:text-blue-900 border-border">
                                         {teachers.map(t => <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
@@ -160,7 +160,7 @@ const AddPaper = () => {
                                         <SelectValue placeholder="Select duration" />
                                         <Clock className="h-4 w-4 text-muted-foreground ml-auto opacity-50" />
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent className="bg-blue-50 [&_[data-highlighted]]:bg-blue-200 [&_[data-highlighted]]:text-blue-900 border-border">
                                         <SelectItem value="30">30 Minutes</SelectItem>
                                         <SelectItem value="60">1 Hour</SelectItem>
                                         <SelectItem value="90">1.5 Hours</SelectItem>
@@ -211,7 +211,7 @@ const AddPaper = () => {
                                         <Button variant="outline" onClick={() => fileInputRef.current?.click()}>Change File</Button>
                                     </div>
                                 ) : (
-                                    <Button variant="outline" onClick={() => fileInputRef.current?.click()}>Browse Files</Button>
+                                    <Button className="bg-blue-500 hover:bg-blue-600 text-white border-transparent shadow-sm transition-colors" onClick={() => fileInputRef.current?.click()}>Browse Files</Button>
                                 )}
                             </div>
                         </div>
@@ -269,7 +269,7 @@ const AddPaper = () => {
 
                     <div className="flex justify-between pt-8 border-t mt-8">
                         {step > 1 ? (
-                            <Button variant="outline" onClick={handleBack}>Back</Button>
+                            <Button className="bg-blue-500 hover:bg-blue-600 text-white border-transparent shadow-sm transition-colors" onClick={handleBack}>Back</Button>
                         ) : (
                             <div></div>
                         )}

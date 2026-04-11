@@ -322,7 +322,7 @@ const ExamReview = () => {
                   <SelectTrigger>
                     <SelectValue placeholder="Select an exam" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-blue-50 [&_[data-highlighted]]:bg-blue-200 [&_[data-highlighted]]:text-blue-900 border-border">
                     <SelectItem value="all">All exams</SelectItem>
                     {reviewableExams.map((exam) => (
                       <SelectItem key={String(exam.id)} value={String(exam.id)}>
@@ -332,7 +332,7 @@ const ExamReview = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <Button variant="outline" onClick={() => loadSubmissions(selectedExamId)} disabled={loading}>
+              <Button className="bg-blue-500 hover:bg-blue-600 text-white shadow-sm transition-colors border-transparent" onClick={() => loadSubmissions(selectedExamId)} disabled={loading}>
                 {loading ? 'Loading...' : 'Refresh'}
               </Button>
             </div>
@@ -370,7 +370,7 @@ const ExamReview = () => {
                     </TableCell>
                     <TableCell>{item.mark ?? 0}</TableCell>
                     <TableCell className="text-right">
-                      <Button size="sm" variant="outline" onClick={() => setActiveSubmissionId(item.id)}>
+                      <Button size="sm" className="bg-blue-500 hover:bg-blue-600 text-white border-transparent" onClick={() => setActiveSubmissionId(item.id)}>
                         Review
                       </Button>
                     </TableCell>
@@ -492,7 +492,7 @@ const ExamReview = () => {
 
               <div className="flex justify-end gap-2">
                 <Button variant="ghost" onClick={() => setActiveSubmissionId(null)}>Cancel</Button>
-                <Button className="gradient-primary text-primary-foreground" onClick={onSaveReview}>
+                <Button className="bg-blue-500 hover:bg-blue-600 text-white shadow-sm border-transparent transition-colors" onClick={onSaveReview}>
                   Submit Marks
                 </Button>
               </div>

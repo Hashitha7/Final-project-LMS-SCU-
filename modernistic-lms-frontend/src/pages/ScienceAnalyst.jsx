@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/components/ui/sonner';
-import { Brain, Upload, FileText, CheckCircle2, XCircle, BarChart3, Loader2, Microscope, Atom, Zap, Eye, Trash2 } from 'lucide-react';
+import { Brain, Upload, FileText, CheckCircle2, XCircle, BarChart3, Loader2, Microscope, Atom, Zap, Eye, Trash2, User } from 'lucide-react';
 import api from '@/lib/api';
 
 const ScienceAnalyst = () => {
@@ -22,14 +22,43 @@ const ScienceAnalyst = () => {
     const [dragActive, setDragActive] = useState(false);
     const [grade, setGrade] = useState('');
     const [subject, setSubject] = useState('');
-    const [studentName, setStudentName] = useState('');
+    const [selectedStudentId, setSelectedStudentId] = useState('');
+    const [selectedStudentName, setSelectedStudentName] = useState('');
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [errors, setErrors] = useState({});        // field-level validation errors
     const [submitAttempted, setSubmitAttempted] = useState(false);
 
+    // Students list (for admin/teacher dropdown)
+    const [students, setStudents] = useState([]);
+    const [loadingStudents, setLoadingStudents] = useState(false);
+
     // Results state
     const [results, setResults] = useState([]);
     const [loadingResults, setLoadingResults] = useState(true);
+
+    const isStudent = user?.role === 'student';
+    const canAnalyze = user?.role === 'admin' || user?.role === 'teacher' || user?.role === 'institute';
+
+    // Load students list for admin/teacher
+    useEffect(() => {
+        if (canAnalyze) {
+            setLoadingStudents(true);
+            api.get('/students')
+                .then(r => setStudents(r.data || []))
+                .catch(err => {
+                    console.error('Failed to load students:', err);
+                    setStudents([]);
+                })
+                .finally(() => setLoadingStudents(false));
+        }
+
+        // If student is logged in, auto-use their own name
+        if (isStudent && user?.name) {
+            setSelectedStudentName(user.name);
+            setSelectedStudentId(String(user.id));
+        }
+    }, [user, canAnalyze, isStudent]);
+
     // Load results on mount
     useEffect(() => {
         loadResults();
@@ -43,6 +72,17 @@ const ScienceAnalyst = () => {
             .finally(() => setLoadingResults(false));
     };
 
+    // Filter results based on role — students only see their own
+    const visibleResults = useMemo(() => {
+        if (!results) return [];
+        if (isStudent && user?.name) {
+            return results.filter(r =>
+                r.studentName && r.studentName.trim().toLowerCase() === user.name.trim().toLowerCase()
+            );
+        }
+        return results;
+    }, [results, isStudent, user]);
+
     const handleDelete = async (e, id) => {
         e.stopPropagation();
         if (!window.confirm('Are you sure you want to delete this analysis result? This cannot be undone.')) return;
@@ -55,14 +95,14 @@ const ScienceAnalyst = () => {
         }
     };
 
-    // Stats
+    // Stats — based on visible results (role-filtered)
     const stats = useMemo(() => {
-        const total = results.length;
-        const avgScore = total > 0 ? (results.reduce((sum, r) => sum + (r.score || 0), 0) / total).toFixed(1) : 0;
-        const excellent = results.filter(r => r.gradeLabel === 'Excellent').length;
-        const needsImprovement = results.filter(r => r.gradeLabel === 'Needs Improvement').length;
+        const total = visibleResults.length;
+        const avgScore = total > 0 ? (visibleResults.reduce((sum, r) => sum + (r.score || 0), 0) / total).toFixed(1) : 0;
+        const excellent = visibleResults.filter(r => r.gradeLabel === 'Excellent').length;
+        const needsImprovement = visibleResults.filter(r => r.gradeLabel === 'Needs Improvement').length;
         return { total, avgScore, excellent, needsImprovement };
-    }, [results]);
+    }, [visibleResults]);
 
     // File handling
     const handleDrag = (e) => {
@@ -95,13 +135,21 @@ const ScienceAnalyst = () => {
         }
     };
 
+    // Handle student dropdown selection
+    const handleStudentSelect = (studentId) => {
+        setSelectedStudentId(studentId);
+        const found = students.find(s => String(s.id) === String(studentId));
+        setSelectedStudentName(found ? found.name : '');
+        setErrors(p => ({ ...p, studentName: undefined }));
+    };
+
     // Validate all required fields — returns error object
     const validateForm = () => {
         const errs = {};
-        if (!file)          errs.file    = 'Please select a PDF file to upload.';
-        if (!grade)         errs.grade   = 'Grade is required.';
-        if (!subject)       errs.subject = 'Subject is required.';
-        if (!studentName.trim()) errs.studentName = 'Student name is required.';
+        if (!file)                       errs.file        = 'Please select a PDF file to upload.';
+        if (!grade)                      errs.grade       = 'Grade is required.';
+        if (!subject)                    errs.subject     = 'Subject is required.';
+        if (!selectedStudentName.trim()) errs.studentName = 'Please select a student.';
         return errs;
     };
 
@@ -122,7 +170,7 @@ const ScienceAnalyst = () => {
             formData.append('file', file);
             formData.append('grade', grade);
             if (subject && subject !== 'mixed') formData.append('subject', subject);  // omit for mixed papers
-            formData.append('student_name', studentName || 'Unknown Student');
+            formData.append('student_name', selectedStudentName || 'Unknown Student');
             formData.append('teacher_name', user?.name || 'Unknown Teacher');
 
             const response = await api.post('/science-analyst/analyze', formData, {
@@ -150,8 +198,6 @@ const ScienceAnalyst = () => {
             setIsAnalyzing(false);
         }
     };
-
-    const canAnalyze = user?.role === 'admin' || user?.role === 'teacher' || user?.role === 'institute';
 
     const gradeColor = (g) => {
         switch (g) {
@@ -226,7 +272,7 @@ const ScienceAnalyst = () => {
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-6">
-                            {/* Grade, Subject selectors */}
+                            {/* Grade, Subject, Student selectors */}
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <div className="space-y-2">
                                     <Label>Grade <span className="text-red-500">*</span></Label>
@@ -234,7 +280,7 @@ const ScienceAnalyst = () => {
                                         <SelectTrigger className={errors.grade ? 'border-red-500' : ''}>
                                             <SelectValue placeholder="Select Grade" />
                                         </SelectTrigger>
-                                        <SelectContent>
+                                        <SelectContent className="bg-blue-50 [&_[data-highlighted]]:bg-blue-200 [&_[data-highlighted]]:text-blue-900 border-border">
                                             <SelectItem value="10">Grade 10</SelectItem>
                                             <SelectItem value="11">Grade 11</SelectItem>
                                         </SelectContent>
@@ -247,7 +293,7 @@ const ScienceAnalyst = () => {
                                         <SelectTrigger className={errors.subject ? 'border-red-500' : ''}>
                                             <SelectValue placeholder="Select Subject" />
                                         </SelectTrigger>
-                                        <SelectContent>
+                                        <SelectContent className="bg-blue-50 [&_[data-highlighted]]:bg-blue-200 [&_[data-highlighted]]:text-blue-900 border-border">
                                             <SelectItem value="mixed">
                                                 <span className="flex items-center gap-2">🔬 Mixed Paper (All Subjects)</span>
                                             </SelectItem>
@@ -264,14 +310,40 @@ const ScienceAnalyst = () => {
                                     </Select>
                                     {errors.subject && <p className="text-xs text-red-500">{errors.subject}</p>}
                                 </div>
+
+                                {/* Student Dropdown */}
                                 <div className="space-y-2">
-                                    <Label>Student Name <span className="text-red-500">*</span></Label>
-                                    <Input
-                                        placeholder="Student name"
-                                        value={studentName}
-                                        onChange={e => { setStudentName(e.target.value); setErrors(p => ({...p, studentName: undefined})); }}
-                                        className={errors.studentName ? 'border-red-500' : ''}
-                                    />
+                                    <Label>Student <span className="text-red-500">*</span></Label>
+                                    <Select
+                                        value={selectedStudentId}
+                                        onValueChange={handleStudentSelect}
+                                        disabled={loadingStudents}
+                                    >
+                                        <SelectTrigger className={errors.studentName ? 'border-red-500' : ''}>
+                                            {loadingStudents ? (
+                                                <span className="flex items-center gap-2 text-muted-foreground">
+                                                    <Loader2 className="w-4 h-4 animate-spin" /> Loading students…
+                                                </span>
+                                            ) : (
+                                                <SelectValue placeholder="Select Student" />
+                                            )}
+                                        </SelectTrigger>
+                                        <SelectContent className="max-h-64 bg-blue-50 [&_[data-highlighted]]:bg-blue-200 [&_[data-highlighted]]:text-blue-900 border-border">
+                                            {students.length === 0 && !loadingStudents ? (
+                                                <div className="py-3 px-4 text-sm text-muted-foreground text-center">No students found</div>
+                                            ) : (
+                                                students.map(s => (
+                                                    <SelectItem key={s.id} value={String(s.id)}>
+                                                        <span className="flex items-center gap-2">
+                                                            <User className="w-3.5 h-3.5 text-muted-foreground" />
+                                                            {s.name}
+                                                            {s.grade && <span className="text-xs text-muted-foreground ml-1">({s.grade})</span>}
+                                                        </span>
+                                                    </SelectItem>
+                                                ))
+                                            )}
+                                        </SelectContent>
+                                    </Select>
                                     {errors.studentName && <p className="text-xs text-red-500">{errors.studentName}</p>}
                                 </div>
                             </div>
@@ -358,7 +430,7 @@ const ScienceAnalyst = () => {
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <BarChart3 className="w-5 h-5" />
-                            Analysis History
+                            {isStudent ? 'My Analysis History' : 'Analysis History'}
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="p-0">
@@ -366,11 +438,15 @@ const ScienceAnalyst = () => {
                             <div className="flex items-center justify-center py-12">
                                 <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                             </div>
-                        ) : results.length === 0 ? (
+                        ) : visibleResults.length === 0 ? (
                             <div className="text-center py-12 text-muted-foreground">
                                 <Brain className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                                <p className="font-medium">No analyses yet</p>
-                                <p className="text-sm">Upload a student answer sheet to get started</p>
+                                <p className="font-medium">{isStudent ? 'No analyses for you yet' : 'No analyses yet'}</p>
+                                <p className="text-sm">
+                                    {isStudent
+                                        ? 'Your teacher will upload your answer sheet to get started'
+                                        : 'Upload a student answer sheet to get started'}
+                                </p>
                             </div>
                         ) : (
                             <Table>
@@ -387,7 +463,7 @@ const ScienceAnalyst = () => {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {results.sort((a, b) => new Date(b.analyzedAt) - new Date(a.analyzedAt)).map((r) => (
+                                    {visibleResults.sort((a, b) => new Date(b.analyzedAt) - new Date(a.analyzedAt)).map((r) => (
                                         <TableRow key={r.id} className="hover:bg-secondary/50 cursor-pointer" onClick={() => navigate(`/app/science-analyst/results/${r.id}`)}>
                                             <TableCell className="font-medium text-foreground">{r.studentName || '—'}</TableCell>
                                             <TableCell><Badge variant="outline">{r.grade || '—'}</Badge></TableCell>
@@ -417,15 +493,18 @@ const ScienceAnalyst = () => {
                                                     >
                                                         <Eye className="w-4 h-4" />
                                                     </Button>
-                                                    <Button
-                                                        size="icon"
-                                                        variant="outline"
-                                                        title="Delete Result"
-                                                        onClick={(e) => handleDelete(e, r.id)}
-                                                        className="h-8 w-8 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/30"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </Button>
+                                                    {/* Only admin/teacher can delete */}
+                                                    {!isStudent && (
+                                                        <Button
+                                                            size="icon"
+                                                            variant="outline"
+                                                            title="Delete Result"
+                                                            onClick={(e) => handleDelete(e, r.id)}
+                                                            className="h-8 w-8 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/30"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </Button>
+                                                    )}
                                                 </div>
                                             </TableCell>
                                         </TableRow>

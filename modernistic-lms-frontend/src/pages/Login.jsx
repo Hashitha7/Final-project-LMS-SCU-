@@ -53,10 +53,7 @@ const Login = () => {
       <div className="relative grid h-screen grid-cols-1 lg:grid-cols-2">
         <section className="hidden h-screen lg:flex flex-col justify-between border-r border-slate-200/60 bg-gradient-to-br from-[#0f172a] via-[#14213d] to-[#1d3557] p-10 text-white">
           <div>
-            <div className="inline-flex items-center gap-3 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm backdrop-blur-sm">
-              <Sparkles className="h-4 w-4 text-[#ffd166]" />
-              Next Gen Learning Platform
-            </div>
+
             <h1 className="mt-8 text-5xl font-black leading-tight tracking-tight">
               Modernistic
               <br />
@@ -79,9 +76,7 @@ const Login = () => {
         <section className="flex h-screen items-center justify-center overflow-hidden px-4 py-4 sm:px-6">
           <div className="w-full max-w-lg rounded-3xl border border-slate-200/70 bg-white/85 p-5 shadow-2xl backdrop-blur-md sm:p-7 dark:border-slate-800 dark:bg-slate-900/90">
             <div className="mb-8 text-center sm:text-left">
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-r from-[#f97316] to-[#fb8500] text-white shadow-lg sm:mx-0">
-                <Sparkles className="h-6 w-6" />
-              </div>
+
               <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">Welcome Back</h2>
               <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Sign in to continue to your learning workspace.</p>
             </div>

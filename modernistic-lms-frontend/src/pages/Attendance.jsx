@@ -108,8 +108,8 @@ const Attendance = () => {
                   <Button
                     variant={"outline"}
                     className={cn(
-                      "w-[240px] justify-start text-left font-normal bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 h-10",
-                      !date && "text-muted-foreground"
+                      "w-[240px] justify-start text-left font-normal bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 h-10 data-[state=open]:bg-blue-500 data-[state=open]:text-white",
+                      !date && "text-muted-foreground data-[state=open]:text-white"
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
@@ -122,6 +122,9 @@ const Attendance = () => {
                     selected={date}
                     onSelect={setDate}
                     initialFocus
+                    classNames={{
+                      day_selected: "bg-blue-500 text-white hover:bg-blue-600 hover:text-white focus:bg-blue-500 focus:text-white"
+                    }}
                   />
                 </PopoverContent>
               </Popover>
@@ -131,7 +134,7 @@ const Attendance = () => {
                 <SelectTrigger className="w-[240px] bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 h-10">
                   <SelectValue placeholder="Select Teacher" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-blue-50 [&_[data-highlighted]]:bg-blue-200 [&_[data-highlighted]]:text-blue-900 border-border">
                   {teachers.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -206,7 +209,7 @@ const Attendance = () => {
                   <SelectTrigger className="w-[80px] h-8 bg-white border-slate-200 shadow-sm">
                     <SelectValue placeholder="10 rows" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-blue-50 [&_[data-highlighted]]:bg-blue-200 [&_[data-highlighted]]:text-blue-900 border-border">
                     <SelectItem value="10">10 ...</SelectItem>
                     <SelectItem value="20">20 ...</SelectItem>
                     <SelectItem value="50">50 ...</SelectItem>

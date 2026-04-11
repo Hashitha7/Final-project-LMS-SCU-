@@ -85,7 +85,6 @@ const menuItems = {
     { label: 'My Courses', icon: BookOpen, path: '/app/courses' },
     { label: 'Classes', icon: Layers, path: '/app/classes' },
     { label: 'Exams', icon: ClipboardList, path: '/app/exams' },
-    { label: 'Attendance', icon: Calendar, path: '/app/attendance' },
     { label: 'Zoom Classes', icon: Video, path: '/app/zoom' },
     { label: 'Notifications', icon: Bell, path: '/app/notifications' },
     { label: 'Payments', icon: CreditCard, path: '/app/payments' },
@@ -193,7 +192,7 @@ export const Sidebar = () => {
             <p className="text-[10px] text-muted-foreground truncate">{user.school}</p>
           </div>
         )}
-        <Button variant="ghost" size="icon" className="ml-auto hidden lg:flex h-7 w-7 text-muted-foreground" onClick={() => setCollapsed(!collapsed)}>
+        <Button size="icon" className="ml-auto hidden lg:flex h-7 w-7 bg-blue-500 hover:bg-blue-600 text-white shadow-sm transition-colors border-transparent" onClick={() => setCollapsed(!collapsed)}>
           {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </Button>
       </div>
@@ -218,7 +217,7 @@ export const Sidebar = () => {
             </div>
           )}
           {!collapsed && (
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => { logout(); navigate('/login'); }}>
+            <Button size="icon" className="h-8 w-8 bg-blue-500 hover:bg-blue-600 text-white shadow-sm transition-colors border-transparent" onClick={() => { logout(); navigate('/login'); }}>
               <LogOut className="w-4 h-4" />
             </Button>
           )}

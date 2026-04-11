@@ -283,7 +283,7 @@ const Lessons = () => {
                                                 <div className="mt-auto space-y-3">
                                                     <div className="flex items-center justify-between text-sm">
                                                         <div className="flex items-center gap-2">
-                                                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold shadow-sm">
+                                                            <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold shadow-sm">
                                                                 {(getTeacherName(lesson) || 'U').charAt(0).toUpperCase()}
                                                             </div>
                                                             <span className="text-slate-600 dark:text-slate-400 font-medium">{getTeacherName(lesson)}</span>

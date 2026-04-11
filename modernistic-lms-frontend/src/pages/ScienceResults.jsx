@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,6 +35,8 @@ const ScienceResults = () => {
     const { answerId } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
+    const { user } = useAuth();
+    const isStudent = user?.role === 'student';
     const [result, setResult] = useState(location.state?.result || null);
     const [loading, setLoading] = useState(!result);
 
@@ -421,9 +424,12 @@ const ScienceResults = () => {
                     <Button className="bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 shadow-sm transition-colors" onClick={() => navigate('/app/science-analyst')}>
                         <ArrowLeft className="w-4 h-4 mr-2" /> Back
                     </Button>
-                    <Button className="bg-blue-500 hover:bg-blue-600 text-white shadow-md transition-colors" onClick={() => navigate('/app/science-analyst')}>
-                        <Brain className="w-4 h-4 mr-2" /> Analyze Another
-                    </Button>
+                    {/* Only admin/teacher can upload — hide Analyze Another for students */}
+                    {!isStudent && (
+                        <Button className="bg-blue-500 hover:bg-blue-600 text-white shadow-md transition-colors" onClick={() => navigate('/app/science-analyst')}>
+                            <Brain className="w-4 h-4 mr-2" /> Analyze Another
+                        </Button>
+                    )}
                 </div>
             </div>
         </AppLayout>

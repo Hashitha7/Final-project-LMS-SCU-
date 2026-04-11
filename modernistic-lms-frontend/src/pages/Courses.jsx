@@ -381,7 +381,7 @@ const Courses = () => {
             setFormData(p => ({ ...p, timeTable: [...p.timeTable, newItem] }));
           }}>
             <SelectTrigger className="h-12 bg-slate-50 border-slate-200"><SelectValue placeholder="Add a day to schedule" /></SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-blue-50 [&_[data-highlighted]]:bg-blue-200 [&_[data-highlighted]]:text-blue-900 border-border">
               {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
             </SelectContent>
           </Select>
@@ -430,7 +430,7 @@ const Courses = () => {
           <Label className="text-lg font-semibold text-slate-800">Assign a Teacher</Label>
           <Select value={formData.teacherId} onValueChange={(v) => setFormData({ ...formData, teacherId: v })}>
             <SelectTrigger className="h-14 text-lg px-4 bg-slate-50 border-slate-200"><SelectValue placeholder="Select a Teacher" /></SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-blue-50 [&_[data-highlighted]]:bg-blue-200 [&_[data-highlighted]]:text-blue-900 border-border">
               {users.filter(u => u.role === 'teacher').map(t => <SelectItem key={t.id} value={t.id} className="py-3">{t.name}</SelectItem>)}
             </SelectContent>
           </Select>
@@ -728,7 +728,7 @@ const Courses = () => {
             </div>
 
             <div className="bg-white dark:bg-slate-900 p-6 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
-              <Button variant="ghost" size="lg" onClick={() => currentStep === 1 ? navigate('/app/courses') : setCurrentStep(c => c - 1)} className="text-slate-500 hover:text-slate-900 font-medium">
+              <Button size="lg" onClick={() => currentStep === 1 ? navigate('/app/courses') : setCurrentStep(c => c - 1)} className="bg-blue-500 hover:bg-blue-600 text-white font-medium shadow-sm transition-colors border-transparent">
                 <ArrowLeft className="w-4 h-4 mr-2" /> Back
               </Button>
 
@@ -798,7 +798,7 @@ const Courses = () => {
                 <SelectTrigger>
                   <SelectValue placeholder="Select Student" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-blue-50 [&_[data-highlighted]]:bg-blue-200 [&_[data-highlighted]]:text-blue-900 border-border">
                   {users.filter(u => u.role === 'student').map(student => (
                     <SelectItem key={student.id} value={student.id}>{student.name} ({student.email})</SelectItem>
                   ))}

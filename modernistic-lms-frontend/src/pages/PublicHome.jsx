@@ -39,28 +39,15 @@ const PublicHome = () => {
 
           <h1 className="text-4xl md:text-5xl lg:text-[4rem] font-black tracking-tight text-foreground mb-6 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100 leading-[1.1]">
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-700 via-indigo-600 to-purple-700 dark:from-blue-400 dark:via-indigo-400 dark:to-purple-400">
-              School Management + AI Learning in One Modernistic LMS Platform
+              Elevate Education with Our Modernistic LMS with AI Answer Analyst System Platform
             </span>
           </h1>
 
-          <p className="mx-auto mb-8 max-w-3xl text-base md:text-lg text-slate-700 dark:text-slate-200 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
-            Manage courses, classes, exams, attendance, payments, Zoom sessions, and science answer analysis from a single role-based system for Institute Admins, Teachers, and Students.
-          </p>
 
-          <div className="mb-8 flex flex-wrap justify-center gap-2 animate-in fade-in slide-in-from-bottom-10 duration-700 delay-250">
-            <Badge variant="secondary">Institute Dashboard</Badge>
-            <Badge variant="secondary">Teacher Workspace</Badge>
-            <Badge variant="secondary">Student Portal</Badge>
-            <Badge variant="secondary">Secure Payments</Badge>
-            <Badge variant="secondary">Science AI Analyst</Badge>
-          </div>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-in fade-in slide-in-from-bottom-10 duration-700 delay-300">
             <Button asChild size="lg" className="h-12 px-8 text-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30 hover:shadow-xl transition-all rounded-full hover:scale-105 active:scale-95">
               <Link to="/register">Get Started <ArrowRight className="ml-2 w-5 h-5" /></Link>
-            </Button>
-            <Button asChild size="lg" variant="outline" className="h-12 px-8 text-lg rounded-full">
-              <Link to="/login">Login to Dashboard</Link>
             </Button>
           </div>
         </div>
@@ -130,7 +117,7 @@ const PublicHome = () => {
             <div className="space-y-8">
               <h2 className="text-3xl md:text-5xl font-black leading-tight tracking-tight">
                 Focus on management and teaching, <br />
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">the platform handles operations.</span>
+                <span className="text-blue-600">the platform handles operations.</span>
               </h2>
               <p className="text-xl text-muted-foreground font-medium">
                 From student registration to payment verification to AI-based science answer analysis, this system reduces manual workload for your team.
@@ -146,32 +133,12 @@ const PublicHome = () => {
                   <span className="font-medium">{item}</span>
                 </div>))}
               </div>
-              <div className="pt-4">
-                <Button asChild size="lg" variant="outline" className="rounded-full">
-                  <Link to="/login">Explore Dashboard</Link>
-                </Button>
-              </div>
+
             </div>
             <div className="relative">
               <div className="absolute -inset-4 bg-gradient-to-r from-primary to-accent opacity-20 blur-3xl rounded-full" />
-              <div className="relative bg-card border border-border rounded-2xl shadow-2xl p-6 md:p-8 space-y-6">
-                {/* Mock UI Element */}
-                <div className="flex items-center justify-between border-b border-border pb-4">
-                  <div className="space-y-1">
-                    <div className="h-2 w-24 bg-muted rounded animate-pulse" />
-                    <div className="h-4 w-48 bg-muted rounded animate-pulse" />
-                  </div>
-                  <div className="h-8 w-8 rounded-full bg-primary/20" />
-                </div>
-                <div className="space-y-3">
-                  <div className="h-20 bg-muted/50 rounded-lg w-full" />
-                  <div className="h-20 bg-muted/50 rounded-lg w-full" />
-                  <div className="h-20 bg-muted/50 rounded-lg w-full" />
-                </div>
-                <div className="pt-4 flex justify-between items-center">
-                  <div className="h-8 w-24 bg-primary/20 rounded" />
-                  <div className="h-8 w-8 bg-muted rounded-full" />
-                </div>
+              <div className="relative border border-border rounded-2xl shadow-2xl overflow-hidden drop-shadow-2xl">
+                <img src="/assets/1.jpeg" alt="Platform Dashboard" className="w-full h-auto object-cover block" />
               </div>
             </div>
           </div>
@@ -247,4 +214,3 @@ const PublicHome = () => {
   </div>);
 };
 export default PublicHome;
-

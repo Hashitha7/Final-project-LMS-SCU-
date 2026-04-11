@@ -229,7 +229,7 @@ const AddLesson = () => {
                                             <SelectTrigger className="h-12 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700">
                                                 <SelectValue placeholder="Select teacher" />
                                             </SelectTrigger>
-                                            <SelectContent>
+                                            <SelectContent className="bg-blue-50 [&_[data-highlighted]]:bg-blue-200 [&_[data-highlighted]]:text-blue-900 border-border">
                                                 {users.filter(u => u.role === 'teacher').map(teacher => (
                                                     <SelectItem key={teacher.id} value={teacher.id.toString()}>{teacher.name}</SelectItem>
                                                 ))}
@@ -438,7 +438,7 @@ const AddLesson = () => {
                                     ))}
                                 </div>
                                 <div className="flex justify-between pt-4">
-                                    <Button onClick={() => setCurrentStep(1)} variant="outline" size="lg" className="px-8 h-11">Back</Button>
+                                    <Button onClick={() => setCurrentStep(1)} className="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-8 h-11 border-transparent transition-colors" size="lg">Back</Button>
                                     <Button onClick={() => setCurrentStep(3)} size="lg" className="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-8 h-11">Next</Button>
                                 </div>
                             </div>
@@ -488,7 +488,7 @@ const AddLesson = () => {
                                     )}
                                 </div>
                                 <div className="flex justify-between pt-4">
-                                    <Button onClick={() => setCurrentStep(2)} variant="outline" size="lg" className="px-8 h-11">Back</Button>
+                                    <Button onClick={() => setCurrentStep(2)} className="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-8 h-11 border-transparent transition-colors" size="lg">Back</Button>
                                     <Button onClick={() => setCurrentStep(4)} size="lg" className="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-8 h-11">Next</Button>
                                 </div>
                             </div>
@@ -525,7 +525,7 @@ const AddLesson = () => {
                                     </div>
                                 </div>
                                 <div className="flex justify-between pt-4">
-                                    <Button onClick={() => setCurrentStep(3)} variant="outline" size="lg" className="px-8 h-11">Back</Button>
+                                    <Button onClick={() => setCurrentStep(3)} className="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-8 h-11 border-transparent transition-colors" size="lg">Back</Button>
                                     <Button onClick={() => setCurrentStep(5)} size="lg" className="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-8 h-11">Next</Button>
                                 </div>
                             </div>
@@ -548,7 +548,7 @@ const AddLesson = () => {
                                     <Button onClick={handleSave} size="lg" className="bg-green-600 hover:bg-green-700 text-white font-bold h-12 rounded-xl shadow-lg shadow-green-600/20">
                                         Publish Lesson
                                     </Button>
-                                    <Button onClick={() => setCurrentStep(4)} variant="ghost" className="text-slate-500 hover:text-slate-900">
+                                    <Button onClick={() => setCurrentStep(4)} className="bg-blue-500 hover:bg-blue-600 text-white border-transparent transition-colors shadow-sm h-11 rounded-xl font-bold">
                                         Go Back & Edit
                                     </Button>
                                 </div>

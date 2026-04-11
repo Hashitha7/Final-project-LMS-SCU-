@@ -195,7 +195,7 @@ const Payments = () => {
         <PageHeader title="Payments" subtitle="Student checkout + admin finance tracking">
 
           {/* Export */}
-          <Button size="sm" variant="outline" onClick={() => toast.message('Export feature — coming soon')}>
+          <Button size="sm" className="bg-blue-500 hover:bg-blue-600 text-white shadow-sm transition-colors" onClick={() => toast.message('Export feature — coming soon')}>
             <Download className="w-4 h-4 mr-1"/> Export
           </Button>
 
@@ -203,7 +203,7 @@ const Payments = () => {
           {isFinanceManager && (
             <Dialog>
               <DialogTrigger asChild>
-                <Button size="sm" className="gradient-primary text-primary-foreground">
+                <Button size="sm" className="bg-blue-500 hover:bg-blue-600 text-white shadow-sm transition-colors">
                   <Plus className="w-4 h-4 mr-1"/> Record Payment
                 </Button>
               </DialogTrigger>
@@ -259,7 +259,7 @@ const Payments = () => {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button className="gradient-primary text-primary-foreground" onClick={recordManualPayment}>Save</Button>
+                  <Button className="bg-blue-500 hover:bg-blue-600 text-white shadow-sm transition-colors" onClick={recordManualPayment}>Save</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -269,7 +269,7 @@ const Payments = () => {
           {isStudent && (
             <Dialog open={gatewayOpen} onOpenChange={setGatewayOpen}>
               <DialogTrigger asChild>
-                <Button size="sm" className="bg-gradient-to-r from-emerald-600 to-cyan-600 text-white shadow-md hover:shadow-lg">
+                <Button size="sm" className="bg-emerald-500 hover:bg-emerald-600 text-white font-medium shadow-sm border-transparent transition-colors">
                   <ShieldCheck className="w-4 h-4 mr-1"/> Secure Checkout
                 </Button>
               </DialogTrigger>
@@ -281,12 +281,7 @@ const Payments = () => {
                   </DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
-                  <div className="rounded-lg border bg-gradient-to-r from-emerald-50 to-cyan-50 dark:from-emerald-950/20 dark:to-cyan-950/20 p-3 text-sm">
-                    <div className="font-medium text-foreground flex items-center gap-2">
-                      <ShieldCheck className="w-4 h-4 text-emerald-600" /> PCI-DSS style secure flow
-                    </div>
-                    <p className="text-muted-foreground mt-1">Card details are validated in-browser for demo checkout behavior.</p>
-                  </div>
+
                   <div className="space-y-2">
                     <Label>Select Course</Label>
                     <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
@@ -328,9 +323,9 @@ const Payments = () => {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setGatewayOpen(false)}>Cancel</Button>
+                  <Button className="bg-blue-500 hover:bg-blue-600 text-white font-medium shadow-sm transition-colors border-transparent" onClick={() => setGatewayOpen(false)}>Cancel</Button>
                   <Button
-                    className="bg-gradient-to-r from-emerald-600 to-cyan-600 text-white"
+                    className="bg-emerald-500 hover:bg-emerald-600 text-white font-medium shadow-sm transition-colors border-transparent"
                     onClick={handleStudentGatewayPayment}
                     disabled={gatewayLoading || studentDueCourses.length === 0}
                   >

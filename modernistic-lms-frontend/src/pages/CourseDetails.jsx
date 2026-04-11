@@ -109,8 +109,8 @@ const CourseDetails = () => {
             <CardHeader><CardTitle className="text-lg">Lessons</CardTitle></CardHeader>
             <CardContent className="space-y-2">
               {courseLessons.length === 0 && <p className="text-sm text-muted-foreground">No lessons yet.</p>}
-              {courseLessons.map((l) => (<Button key={l.id} variant={l.id === selectedLessonId ? 'secondary' : 'ghost'} className="w-full justify-start" onClick={() => setSelectedLessonId(l.id)}>
-                  <span className="mr-2 text-muted-foreground">{l.lessonOrder}.</span>
+              {courseLessons.map((l) => (<Button key={l.id} variant={l.id === selectedLessonId ? 'default' : 'ghost'} className={`w-full justify-start ${l.id === selectedLessonId ? 'bg-blue-500 hover:bg-blue-600 text-white font-medium shadow-sm transition-colors border-transparent' : ''}`} onClick={() => setSelectedLessonId(l.id)}>
+                  <span className={`mr-2 ${l.id === selectedLessonId ? 'text-white/80' : 'text-muted-foreground'}`}>{l.lessonOrder}.</span>
                   <span className="truncate">{l.name}</span>
                 </Button>))}
             </CardContent>
@@ -142,7 +142,7 @@ const CourseDetails = () => {
                 <TabsContent value="resources" className="space-y-4">
                   {canManage && selectedLesson && (<Dialog>
                       <DialogTrigger asChild>
-                        <Button size="sm" variant="outline"><Upload className="w-4 h-4 mr-1"/> Add resource</Button>
+                        <Button size="sm" className="bg-blue-500 hover:bg-blue-600 text-white font-medium shadow-sm transition-colors border-transparent"><Upload className="w-4 h-4 mr-1"/> Add resource</Button>
                       </DialogTrigger>
                       <DialogContent className="sm:max-w-lg">
                         <DialogHeader><DialogTitle>Upload lesson resource</DialogTitle></DialogHeader>

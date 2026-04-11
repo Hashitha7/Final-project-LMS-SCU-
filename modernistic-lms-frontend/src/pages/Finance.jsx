@@ -80,7 +80,7 @@ const Finance = ({ view = 'class' }) => {
             <SelectTrigger className="bg-background pl-9 h-10 border-input shadow-sm">
               <SelectValue placeholder="Select Month" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-blue-50 [&_[data-highlighted]]:bg-blue-200 [&_[data-highlighted]]:text-blue-900">
               <SelectItem value="2023/August">2023/August</SelectItem>
               <SelectItem value="2023/September">2023/September</SelectItem>
             </SelectContent>
@@ -92,7 +92,7 @@ const Finance = ({ view = 'class' }) => {
             <SelectTrigger className="bg-background pl-9 h-10 border-input shadow-sm">
               <SelectValue placeholder="All Teachers" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-blue-50 [&_[data-highlighted]]:bg-blue-200 [&_[data-highlighted]]:text-blue-900">
               <SelectItem value="all">All Teachers</SelectItem>
               {teachers.map(t => (
                 <SelectItem key={`t-${t.id}`} value={String(t.id)}>{t.name}</SelectItem>
@@ -106,7 +106,7 @@ const Finance = ({ view = 'class' }) => {
             <SelectTrigger className="bg-background pl-9 h-10 border-input shadow-sm">
               <SelectValue placeholder="All Classes" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-blue-50 [&_[data-highlighted]]:bg-blue-200 [&_[data-highlighted]]:text-blue-900">
               <SelectItem value="all">All Classes</SelectItem>
               {safeClasses.map(c => (
                 <SelectItem key={`c-${c.id}`} value={String(c.id)}>{c.name}</SelectItem>
@@ -166,7 +166,7 @@ const Finance = ({ view = 'class' }) => {
                 <SelectTrigger className="h-8 w-[70px] text-xs bg-background border-border shadow-sm focus:ring-1 focus:ring-primary/20">
                   <SelectValue placeholder="10" />
                 </SelectTrigger>
-                <SelectContent align="end">
+                <SelectContent align="end" className="bg-blue-50 [&_[data-highlighted]]:bg-blue-200 [&_[data-highlighted]]:text-blue-900">
                   <SelectItem value="10">10</SelectItem>
                   <SelectItem value="20">20</SelectItem>
                   <SelectItem value="50">50</SelectItem>

@@ -250,8 +250,8 @@ const ExamTake = () => {
     return (<AppLayout>
       <div className="space-y-6 pt-12 lg:pt-0 max-w-4xl">
         <PageHeader title={`Take exam: ${exam.title}`} subtitle={`Duration: ${exam.durationMin || exam.paperDuration || 60} min • Time left: ${formatTime(secondsLeft)}`}>
-          <Button variant="outline" onClick={requestFullscreen}>Fullscreen</Button>
-          <Button className="gradient-primary text-primary-foreground" onClick={onSubmit}>Submit</Button>
+          <Button className="bg-emerald-500 hover:bg-emerald-600 text-white font-medium border-transparent transition-colors shadow-sm" onClick={requestFullscreen}>Fullscreen</Button>
+          <Button className="bg-blue-500 hover:bg-blue-600 text-white font-medium border-transparent transition-colors shadow-sm" onClick={onSubmit}>Submit</Button>
         </PageHeader>
 
         {exam.integrity?.warnOnTabChange && (<Card className="glass-card">

@@ -224,7 +224,7 @@ const SMS = ({ view = 'class' }) => {
                       <SelectTrigger className="w-full bg-background">
                         <SelectValue placeholder="All Teachers" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-blue-50 [&_[data-highlighted]]:bg-blue-200 [&_[data-highlighted]]:text-blue-900">
                         <SelectItem value="ALL">All Teachers</SelectItem>
                         {teachers.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
                       </SelectContent>
@@ -246,7 +246,7 @@ const SMS = ({ view = 'class' }) => {
                       <SelectTrigger className="w-full bg-background">
                         <SelectValue placeholder={`Select ${view}...`} />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-blue-50 [&_[data-highlighted]]:bg-blue-200 [&_[data-highlighted]]:text-blue-900">
                         {targetOptions.length === 0 ? (
                           <div className="p-4 text-sm text-center text-muted-foreground flex flex-col items-center gap-2">
                             <Search className="w-5 h-5 opacity-50" />
@@ -273,8 +273,8 @@ const SMS = ({ view = 'class' }) => {
                     <Button
                       variant={"outline"}
                       className={cn(
-                        "w-full justify-start text-left font-normal bg-background hover:bg-accent",
-                        !date && "text-muted-foreground"
+                        "w-full justify-start text-left font-normal bg-background hover:bg-blue-50 data-[state=open]:bg-blue-500 data-[state=open]:text-white",
+                        !date && "text-muted-foreground data-[state=open]:text-white"
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
@@ -287,6 +287,9 @@ const SMS = ({ view = 'class' }) => {
                       selected={date}
                       onSelect={setDate}
                       initialFocus
+                      classNames={{
+                        day_selected: "bg-blue-500 text-white hover:bg-blue-600 hover:text-white focus:bg-blue-500 focus:text-white"
+                      }}
                     />
                   </PopoverContent>
                 </Popover>

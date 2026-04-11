@@ -522,8 +522,7 @@ const ZoomClasses = () => {
                 )}
                 {(isAdmin || isTeacher) && selectedMeeting && (
                   <Button
-                    variant="outline"
-                    className="w-full h-10"
+                    className="w-full h-10 bg-blue-500 hover:bg-blue-600 text-white shadow-sm transition-colors border-transparent"
                     onClick={() => handleStart(selectedMeeting)}
                   >
                     <Video className="w-4 h-4 mr-2" /> Start as Host

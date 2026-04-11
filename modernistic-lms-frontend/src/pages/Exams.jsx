@@ -218,7 +218,7 @@ const Exams = () => {
                     return (
                       <div className="flex justify-end gap-2">
                         {(role === 'institute' || role === 'teacher') && (
-                          <Button size="sm" variant="outline" onClick={() => navigate(`/app/exams/review?examId=${e.id}`)}>
+                          <Button size="sm" className="bg-blue-500 hover:bg-blue-600 text-white border-transparent shadow-sm" onClick={() => navigate(`/app/exams/review?examId=${e.id}`)}>
                             Review Answers
                           </Button>
                         )}
@@ -230,7 +230,7 @@ const Exams = () => {
                     return (<div className="text-xs text-muted-foreground text-right">
                       <div>Status: {latestMyAttempt.isFinalMarkCalculated === 1 ? 'Reviewed' : 'Pending Review'}</div>
                       {latestMyAttempt.isFinalMarkCalculated === 1 && <div>Mark: {latestMyAttempt.mark}</div>}
-                      <Button size="sm" variant="outline" className="mt-2" onClick={() => navigate(`/app/exams/take/${e.id}`)}>
+                      <Button size="sm" className="mt-2 bg-blue-500 hover:bg-blue-600 text-white font-medium border-transparent shadow-sm transition-colors" onClick={() => navigate(`/app/exams/take/${e.id}`)}>
                         Retake
                       </Button>
                     </div>);
