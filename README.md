@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>🎓 Modernistic LMS</h1>
+  <h1>🎓 Modernistic LMS with AI Answer Analyst System</h1>
   <p><b>A modern, full-stack Learning Management System built with React, Spring Boot, and AI.</b></p>
   
   [![React](https://img.shields.io/badge/React-18-blue.svg?style=for-the-badge&logo=react)](https://reactjs.org/)
