@@ -69,8 +69,23 @@ const menuItems = {
   institute: adminMenuItems,  // Institute = admin role in new schema
   teacher: [
     { label: 'Dashboard', icon: LayoutDashboard, path: '/app/dashboard' },
-    { label: 'My Courses', icon: BookOpen, path: '/app/courses' },
-    { label: 'Classes', icon: Layers, path: '/app/classes' },
+    {
+      label: 'Manage Course',
+      icon: BookOpen,
+      children: [
+        { label: 'Add Course', path: '/app/courses/create', icon: Plus },
+        { label: 'View Courses', path: '/app/courses', icon: Eye },
+      ]
+    },
+    {
+      label: 'Manage Lessons',
+      icon: Layers,
+      children: [
+        { label: 'Add Lessons', path: '/app/lessons/add', icon: Plus },
+        { label: 'View Lessons', path: '/app/lessons', icon: Eye },
+      ]
+    },
+    { label: 'Classes', icon: GraduationCap, path: '/app/classes' },
     { label: 'Students', icon: Users, path: '/app/students' },
     { label: 'Exams', icon: ClipboardList, path: '/app/exams' },
     { label: 'Attendance', icon: Calendar, path: '/app/attendance' },
