@@ -64,8 +64,13 @@ public class ExamController {
         }).orElse(ResponseEntity.notFound().build());
     }
 
+    @Autowired
+    private com.modernisticlms.backend.repository.StudentQuizAnswersRepository studentQuizAnswersRepository;
+
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('INSTITUTE','TEACHER', 'ADMIN')")
     public ResponseEntity<Void> deleteExam(@PathVariable Long id) {
+        studentQuizAnswersRepository.deleteAll(studentQuizAnswersRepository.findByQuizIdOrderByEndDateTimeDesc(id));
         quizRepository.deleteById(id);
         return ResponseEntity.noContent().build();
     }

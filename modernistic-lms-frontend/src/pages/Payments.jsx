@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/components/ui/sonner';
-import { DollarSign, CreditCard, Download, Plus, TrendingUp, Upload, Landmark, ShieldCheck, ReceiptText } from 'lucide-react';
+import { DollarSign, CreditCard, Download, Plus, TrendingUp, Upload, Landmark, ShieldCheck, ReceiptText, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLmsData } from '@/contexts/LmsDataContext';
 import { uid } from '@/lib/storage';
@@ -20,9 +20,9 @@ const Payments = () => {
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const { payments, courses, users, upsertPayment, setPaymentStatus, attachDepositSlip } = useLmsData();
+  const { payments, courses, users, upsertPayment, setPaymentStatus, attachDepositSlip, deletePayment } = useLmsData();
 
-  if (!user) return <Navigate to="/login"/>;
+  if (!user) return <Navigate to="/login" />;
 
   const isStudent = user.role === 'student';
   const isFinanceManager = ['admin', 'institute'].includes(user.role);
@@ -51,16 +51,16 @@ const Payments = () => {
     });
   }, [completedCourseIds, courses, isStudent, payments, user.id]);
 
-  const totalRevenue  = useMemo(() =>
+  const totalRevenue = useMemo(() =>
     payments.filter(p => p.status === 'completed').reduce((s, p) => s + Number(p.amount || 0), 0),
     [payments]
   );
 
   // Admin / Institute: Record Payment state
   const [studentId, setStudentId] = useState('');
-  const [courseId,  setCourseId]  = useState('');
-  const [amount,    setAmount]    = useState('');
-  const [method,    setMethod]    = useState('offline');
+  const [courseId, setCourseId] = useState('');
+  const [amount, setAmount] = useState('');
+  const [method, setMethod] = useState('offline');
 
   // Student gateway state
   const [gatewayOpen, setGatewayOpen] = useState(false);
@@ -192,11 +192,11 @@ const Payments = () => {
   return (
     <AppLayout>
       <div className="space-y-6 pt-12 lg:pt-0">
-        <PageHeader title="Payments" subtitle="Student checkout + admin finance tracking">
+        <PageHeader title="Payments" subtitle="finance tracking">
 
           {/* Export */}
           <Button size="sm" className="bg-blue-500 hover:bg-blue-600 text-white shadow-sm transition-colors" onClick={() => toast.message('Export feature — coming soon')}>
-            <Download className="w-4 h-4 mr-1"/> Export
+            <Download className="w-4 h-4 mr-1" /> Export
           </Button>
 
           {/* Admin/Institute: record payment manually */}
@@ -204,7 +204,7 @@ const Payments = () => {
             <Dialog>
               <DialogTrigger asChild>
                 <Button size="sm" className="bg-blue-500 hover:bg-blue-600 text-white shadow-sm transition-colors">
-                  <Plus className="w-4 h-4 mr-1"/> Record Payment
+                  <Plus className="w-4 h-4 mr-1" /> Record Payment
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-lg">
@@ -247,7 +247,7 @@ const Payments = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Amount (LKR)</Label>
-                      <Input type="number" value={amount} onChange={e => setAmount(e.target.value)} className="bg-secondary/50"/>
+                      <Input type="number" value={amount} onChange={e => setAmount(e.target.value)} className="bg-secondary/50" />
                     </div>
                     <div className="space-y-2">
                       <Label>Method</Label>
@@ -270,13 +270,13 @@ const Payments = () => {
             <Dialog open={gatewayOpen} onOpenChange={setGatewayOpen}>
               <DialogTrigger asChild>
                 <Button size="sm" className="bg-emerald-500 hover:bg-emerald-600 text-white font-medium shadow-sm border-transparent transition-colors">
-                  <ShieldCheck className="w-4 h-4 mr-1"/> Secure Checkout
+                  <ShieldCheck className="w-4 h-4 mr-1" /> Secure Checkout
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
-                    <CreditCard className="w-5 h-5 text-emerald-600"/>
+                    <CreditCard className="w-5 h-5 text-emerald-600" />
                     Modernistic Secure Payment Gateway
                   </DialogTitle>
                 </DialogHeader>
@@ -286,7 +286,7 @@ const Payments = () => {
                     <Label>Select Course</Label>
                     <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
                       <SelectTrigger className="bg-secondary/50">
-                        <SelectValue placeholder="Choose a course to pay for"/>
+                        <SelectValue placeholder="Choose a course to pay for" />
                       </SelectTrigger>
                       <SelectContent>
                         {studentDueCourses.map(c => (
@@ -297,28 +297,28 @@ const Payments = () => {
                   </div>
                   <div className="space-y-2">
                     <Label>Amount (LKR)</Label>
-                    <Input type="text" value={selectedCourseAmount ? `LKR ${Number(selectedCourseAmount).toLocaleString()}` : ''} readOnly className="bg-secondary/40"/>
+                    <Input type="text" value={selectedCourseAmount ? `LKR ${Number(selectedCourseAmount).toLocaleString()}` : ''} readOnly className="bg-secondary/40" />
                   </div>
                   <div className="space-y-2">
                     <Label>Phone Number</Label>
-                    <Input value={gatewayPhone} onChange={e => setGatewayPhone(e.target.value)} placeholder="07X XXXXXXX" className="bg-secondary/50"/>
+                    <Input value={gatewayPhone} onChange={e => setGatewayPhone(e.target.value)} placeholder="07X XXXXXXX" className="bg-secondary/50" />
                   </div>
                   <div className="space-y-2">
                     <Label>Card Holder Name</Label>
-                    <Input value={cardName} onChange={e => setCardName(e.target.value)} placeholder="Name on card" className="bg-secondary/50"/>
+                    <Input value={cardName} onChange={e => setCardName(e.target.value)} placeholder="Name on card" className="bg-secondary/50" />
                   </div>
                   <div className="space-y-2">
                     <Label>Card Number</Label>
-                    <Input value={cardNumber} onChange={e => setCardNumber(e.target.value)} placeholder="4111 1111 1111 1111" className="bg-secondary/50"/>
+                    <Input value={cardNumber} onChange={e => setCardNumber(e.target.value)} placeholder="4111 1111 1111 1111" className="bg-secondary/50" />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <Label>Expiry (MM/YY)</Label>
-                      <Input value={expiry} onChange={e => setExpiry(e.target.value)} placeholder="08/28" className="bg-secondary/50"/>
+                      <Input value={expiry} onChange={e => setExpiry(e.target.value)} placeholder="08/28" className="bg-secondary/50" />
                     </div>
                     <div className="space-y-2">
                       <Label>CVV</Label>
-                      <Input value={cvv} onChange={e => setCvv(e.target.value)} placeholder="123" className="bg-secondary/50"/>
+                      <Input value={cvv} onChange={e => setCvv(e.target.value)} placeholder="123" className="bg-secondary/50" />
                     </div>
                   </div>
                 </div>
@@ -339,9 +339,9 @@ const Payments = () => {
 
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <StatCard title="Total Revenue (LKR)" value={`Rs. ${totalRevenue.toLocaleString()}`} icon={DollarSign} trend="up" change=""/>
-          <StatCard title="Transactions" value={payments.length} icon={CreditCard}/>
-          <StatCard title="Pending" value={payments.filter(p => p.status === 'pending').length} icon={TrendingUp}/>
+          <StatCard title="Total Revenue (LKR)" value={`Rs. ${totalRevenue.toLocaleString()}`} icon={DollarSign} trend="up" change="" />
+          <StatCard title="Transactions" value={payments.length} icon={CreditCard} />
+          <StatCard title="Pending" value={payments.filter(p => p.status === 'pending').length} icon={TrendingUp} />
         </div>
 
         {isStudent && (
@@ -386,7 +386,7 @@ const Payments = () => {
               <TableBody>
                 {visiblePayments.slice().reverse().map(p => {
                   const student = users.find(u => u.id === p.studentId);
-                  const course  = courses.find(c => c.id === p.courseId);
+                  const course = courses.find(c => c.id === p.courseId);
                   const depositName = typeof p.depositSlip === 'object'
                     ? p.depositSlip?.filename
                     : p.depositSlip;
@@ -400,16 +400,16 @@ const Payments = () => {
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="flex items-center gap-1 w-fit">
-                          {p.method === 'card' ? <><CreditCard className="w-3 h-3 text-emerald-600"/> Card</> :
-                           p.method === 'offline' ? <><Landmark className="w-3 h-3"/> Offline</> :
-                           p.method}
+                          {p.method === 'card' ? <><CreditCard className="w-3 h-3 text-emerald-600" /> Card</> :
+                            p.method === 'offline' ? <><Landmark className="w-3 h-3" /> Offline</> :
+                              p.method}
                         </Badge>
                       </TableCell>
                       <TableCell>
                         <Badge variant={
                           p.status === 'completed' ? 'default' :
-                          p.status === 'pending'   ? 'secondary' :
-                          p.status === 'refunded'  ? 'outline'   : 'destructive'
+                            p.status === 'pending' ? 'secondary' :
+                              p.status === 'refunded' ? 'outline' : 'destructive'
                         }>
                           {p.status}
                         </Badge>
@@ -423,13 +423,13 @@ const Payments = () => {
                           <span className="text-xs text-muted-foreground">{depositName}</span>
                         ) : isStudent && p.method === 'offline' && p.status === 'pending' ? (
                           <label className="inline-flex items-center gap-2 text-sm cursor-pointer">
-                            <Upload className="w-4 h-4"/>
+                            <Upload className="w-4 h-4" />
                             <input className="hidden" type="file" onChange={e => {
                               const file = e.target.files?.[0];
                               if (!file) return;
                               attachDepositSlip(p.id, file.name);
                               toast.success('Deposit slip uploaded');
-                            }}/>
+                            }} />
                             <span className="text-primary hover:underline">Upload slip</span>
                           </label>
                         ) : (
@@ -448,6 +448,18 @@ const Payments = () => {
                             {p.status === 'completed' && (
                               <Button size="sm" variant="outline" onClick={() => setPaymentStatus(p.id, 'refunded', 'Admin initiated refund')}>Refund</Button>
                             )}
+                            <Button size="icon" variant="destructive" className="h-8 w-8 ml-1" title="Delete Payment" onClick={async () => {
+                              if (window.confirm("Are you sure you want to delete this payment record? This action cannot be undone.")) {
+                                try {
+                                  await deletePayment(p.id);
+                                  toast.success('Payment deleted successfully');
+                                } catch (e) {
+                                  toast.error('Failed to delete payment');
+                                }
+                              }
+                            }}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
                           </div>
                         </TableCell>
                       )}

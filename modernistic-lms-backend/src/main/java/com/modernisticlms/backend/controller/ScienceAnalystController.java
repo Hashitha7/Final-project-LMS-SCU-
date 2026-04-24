@@ -195,6 +195,18 @@ public class ScienceAnalystController {
         return ResponseEntity.noContent().build();
     }
 
+    /**
+     * Update the student assigned to a result
+     */
+    @PutMapping("/results/{id}/student")
+    public ResponseEntity<?> updateResultStudent(@PathVariable Long id, @RequestBody Map<String, String> payload) {
+        return scienceAnswerRepository.findById(id).map(answer -> {
+            answer.setStudentName(payload.get("studentName"));
+            scienceAnswerRepository.save(answer);
+            return ResponseEntity.ok(Map.of("success", true, "studentName", answer.getStudentName()));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
     // ─── Helper methods ───────────────────────────────────
     private Double toDouble(Object obj) {
         if (obj == null)

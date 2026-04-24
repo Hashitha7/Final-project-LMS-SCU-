@@ -60,15 +60,15 @@ const Login = () => {
               LMS Hub
             </h1>
             <p className="mt-5 max-w-lg text-base text-slate-200">
-              One place to manage teaching, payments, attendance, and AI-powered learning workflows.
+              One place to manage teaching, payments, attendance, and AI-powered learning .
             </p>
           </div>
 
           <div className="mt-8 relative drop-shadow-2xl overflow-hidden rounded-xl border border-white/10">
-            <img 
-              src="/images/LMS1.png" 
-              alt="LMS Overview" 
-              className="w-full h-auto object-cover opacity-90 hover:opacity-100 transition-opacity duration-300" 
+            <img
+              src="/images/LMS1.png"
+              alt="LMS Overview"
+              className="w-full h-auto object-cover opacity-90 hover:opacity-100 transition-opacity duration-300"
             />
           </div>
         </section>

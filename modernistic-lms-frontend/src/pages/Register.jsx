@@ -101,7 +101,7 @@ const Register = () => {
               <Label htmlFor="grade">Grade / Class (optional)</Label>
               <Input
                 id="grade"
-                placeholder="e.g. Grade 10, A/L Science"
+                placeholder="e.g. Grade 10 or Grade 11"
                 value={grade}
                 onChange={(e) => setGrade(e.target.value)}
               />

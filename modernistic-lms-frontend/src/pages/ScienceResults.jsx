@@ -6,7 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Brain, ArrowLeft, CheckCircle2, XCircle, FileText, BarChart3, Loader2, Star, Microscope, Atom, Zap } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Brain, ArrowLeft, CheckCircle2, XCircle, FileText, BarChart3, Loader2, Star, Microscope, Atom, Zap, User } from 'lucide-react';
+import { toast } from '@/components/ui/sonner';
 import api from '@/lib/api';
 
 const ScoreCircle = ({ score, size = 160 }) => {
@@ -37,16 +39,93 @@ const ScienceResults = () => {
     const location = useLocation();
     const { user } = useAuth();
     const isStudent = user?.role === 'student';
-    const [result, setResult] = useState(location.state?.result || null);
-    const [loading, setLoading] = useState(!result);
+    const canAnalyze = user?.role === 'admin' || user?.role === 'teacher' || user?.role === 'institute';
+    const [result, setResult] = useState(null);
+    const [loading, setLoading] = useState(true);
 
+    // Student dropdown state (admin/teacher only)
+    const [students, setStudents] = useState([]);
+    const [loadingStudents, setLoadingStudents] = useState(false);
+    const [selectedStudentId, setSelectedStudentId] = useState('');
+    const [selectedStudentName, setSelectedStudentName] = useState('');
+
+    // All results (for student navigation lookup)
+    const [allResults, setAllResults] = useState([]);
+
+    // Load students list for admin/teacher
     useEffect(() => {
-        if (!result && answerId && answerId !== 'latest') {
+        if (canAnalyze) {
+            setLoadingStudents(true);
+            // Load students + all results in parallel
+            Promise.all([
+                api.get('/students').then(r => r.data || []),
+                api.get('/science-analyst/results').then(r => r.data || [])
+            ])
+                .then(([studentsData, resultsData]) => {
+                    setStudents(studentsData);
+                    setAllResults(resultsData);
+                })
+                .catch(() => {})
+                .finally(() => setLoadingStudents(false));
+        }
+    }, [canAnalyze]);
+
+    // When result loads, pre-select the student from the result
+    useEffect(() => {
+        if (result?.student_name && students.length > 0) {
+            const found = students.find(s =>
+                s.name.trim().toLowerCase() === result.student_name.trim().toLowerCase()
+            );
+            if (found) {
+                setSelectedStudentId(String(found.id));
+                setSelectedStudentName(found.name);
+            } else {
+                setSelectedStudentName(result.student_name);
+            }
+        }
+    }, [result, students]);
+
+    // When a student is selected from dropdown → assign this result to them
+    const handleStudentSelect = async (studentId) => {
+        setSelectedStudentId(studentId);
+        const found = students.find(s => String(s.id) === String(studentId));
+        const studentName = found ? found.name : '';
+        setSelectedStudentName(studentName);
+
+        if (!studentName || !answerId || answerId === 'latest') return;
+
+        try {
+            // Re-assign this result to the selected student
+            await api.put(`/science-analyst/results/${answerId}/student`, { studentName });
+            
+            // Update local state so it shows up correctly
+            setResult(prev => ({ ...prev, student_name: studentName }));
+            
+            // Update allResults cache so other navigation won't break
+            setAllResults(prev => prev.map(r => 
+                String(r.id) === String(answerId) ? { ...r, studentName: studentName } : r
+            ));
+            
+            toast.success(`Analysis assigned to ${studentName}`);
+        } catch (error) {
+            console.error('Failed to update student:', error);
+            toast.error('Failed to assign result to student.');
+        }
+    };
+
+    // Reset result whenever answerId changes (so navigation between students reloads)
+    useEffect(() => {
+        setResult(null);
+        setLoading(true);
+    }, [answerId]);
+
+    // Fetch result for current answerId
+    useEffect(() => {
+        if (answerId && answerId !== 'latest') {
             setLoading(true);
             api.get(`/science-analyst/results/${answerId}`)
                 .then(r => {
                     const data = r.data;
-                    // Convert DB format to display format
                     setResult({
                         success: true,
                         score: data.score,
@@ -78,7 +157,7 @@ const ScienceResults = () => {
                 })
                 .finally(() => setLoading(false));
         }
-    }, [answerId, result]);
+    }, [answerId]);
 
     if (loading) {
         return (
@@ -198,7 +277,7 @@ const ScienceResults = () => {
                         <Brain className="w-7 h-7 text-primary" />
                         Analysis Results
                     </h1>
-                    <div className="flex items-center gap-3 mt-2 text-sm text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-muted-foreground">
                         {result.question_grade && <Badge variant="outline">Grade {result.question_grade}</Badge>}
                         {result.question_subject && (
                             <Badge variant="outline" className="flex items-center gap-1">
@@ -206,7 +285,48 @@ const ScienceResults = () => {
                             </Badge>
                         )}
                         {result.question_topic && <Badge variant="outline">{result.question_topic}</Badge>}
-                        {result.student_name && <span>• Student: <strong>{result.student_name}</strong></span>}
+
+                        {/* Student Dropdown — admin/teacher only */}
+                        {canAnalyze && (
+                            <div className="flex items-center gap-2">
+                                <span className="text-muted-foreground">•</span>
+                                <Select
+                                    value={selectedStudentId}
+                                    onValueChange={handleStudentSelect}
+                                    disabled={loadingStudents}
+                                >
+                                    <SelectTrigger className="h-8 min-w-[180px] max-w-[260px] text-sm border-border bg-background">
+                                        {loadingStudents ? (
+                                            <span className="flex items-center gap-2 text-muted-foreground">
+                                                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading…
+                                            </span>
+                                        ) : (
+                                            <SelectValue placeholder="Select Student" />
+                                        )}
+                                    </SelectTrigger>
+                                    <SelectContent className="max-h-64 bg-blue-50 [&_[data-highlighted]]:bg-blue-200 [&_[data-highlighted]]:text-blue-900 border-border">
+                                        {students.length === 0 && !loadingStudents ? (
+                                            <div className="py-3 px-4 text-sm text-muted-foreground text-center">No students found</div>
+                                        ) : (
+                                            students.map(s => (
+                                                <SelectItem key={s.id} value={String(s.id)}>
+                                                    <span className="flex items-center gap-2">
+                                                        <User className="w-3.5 h-3.5 text-muted-foreground" />
+                                                        {s.name}
+                                                        {s.grade && <span className="text-xs text-muted-foreground ml-1">({s.grade})</span>}
+                                                    </span>
+                                                </SelectItem>
+                                            ))
+                                        )}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+
+                        {/* Student view — show plain name */}
+                        {isStudent && result.student_name && (
+                            <span>• Student: <strong>{result.student_name}</strong></span>
+                        )}
                     </div>
                 </div>
 

@@ -1,7 +1,7 @@
-"""
-analyzer.py — Science Answer Analysis Engine
-Uses TF-IDF cosine similarity + keyword matching to score student answers
-"""
+
+#analyzer.py — Science Answer Analysis Engine
+#Uses TF-IDF cosine similarity + keyword matching to score student answers
+
 
 import os
 import re
@@ -121,7 +121,7 @@ class ScienceAnalyzer:
         if not self.is_loaded or not self.dataset:
             return None, -1
         
-        # Filter dataset by grade/subject/topic if provided
+        # Filter dataset by grade/subject if provided
         candidates = []
         candidate_indices = []
         for i, item in enumerate(self.dataset):

@@ -146,10 +146,9 @@ const ScienceAnalyst = () => {
     // Validate all required fields — returns error object
     const validateForm = () => {
         const errs = {};
-        if (!file)                       errs.file        = 'Please select a PDF file to upload.';
-        if (!grade)                      errs.grade       = 'Grade is required.';
-        if (!subject)                    errs.subject     = 'Subject is required.';
-        if (!selectedStudentName.trim()) errs.studentName = 'Please select a student.';
+        if (!file) errs.file = 'Please select a PDF file to upload.';
+        if (!grade) errs.grade = 'Grade is required.';
+        if (!subject) errs.subject = 'Subject is required.';
         return errs;
     };
 
@@ -272,11 +271,11 @@ const ScienceAnalyst = () => {
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-6">
-                            {/* Grade, Subject, Student selectors */}
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            {/* Grade & Subject selectors */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label>Grade <span className="text-red-500">*</span></Label>
-                                    <Select value={grade} onValueChange={v => { setGrade(v); setErrors(p => ({...p, grade: undefined})); }}>
+                                    <Select value={grade} onValueChange={v => { setGrade(v); setErrors(p => ({ ...p, grade: undefined })); }}>
                                         <SelectTrigger className={errors.grade ? 'border-red-500' : ''}>
                                             <SelectValue placeholder="Select Grade" />
                                         </SelectTrigger>
@@ -289,7 +288,7 @@ const ScienceAnalyst = () => {
                                 </div>
                                 <div className="space-y-2">
                                     <Label>Subject <span className="text-red-500">*</span></Label>
-                                    <Select value={subject} onValueChange={v => { setSubject(v); setErrors(p => ({...p, subject: undefined})); }}>
+                                    <Select value={subject} onValueChange={v => { setSubject(v); setErrors(p => ({ ...p, subject: undefined })); }}>
                                         <SelectTrigger className={errors.subject ? 'border-red-500' : ''}>
                                             <SelectValue placeholder="Select Subject" />
                                         </SelectTrigger>
@@ -309,42 +308,6 @@ const ScienceAnalyst = () => {
                                         </SelectContent>
                                     </Select>
                                     {errors.subject && <p className="text-xs text-red-500">{errors.subject}</p>}
-                                </div>
-
-                                {/* Student Dropdown */}
-                                <div className="space-y-2">
-                                    <Label>Student <span className="text-red-500">*</span></Label>
-                                    <Select
-                                        value={selectedStudentId}
-                                        onValueChange={handleStudentSelect}
-                                        disabled={loadingStudents}
-                                    >
-                                        <SelectTrigger className={errors.studentName ? 'border-red-500' : ''}>
-                                            {loadingStudents ? (
-                                                <span className="flex items-center gap-2 text-muted-foreground">
-                                                    <Loader2 className="w-4 h-4 animate-spin" /> Loading students…
-                                                </span>
-                                            ) : (
-                                                <SelectValue placeholder="Select Student" />
-                                            )}
-                                        </SelectTrigger>
-                                        <SelectContent className="max-h-64 bg-blue-50 [&_[data-highlighted]]:bg-blue-200 [&_[data-highlighted]]:text-blue-900 border-border">
-                                            {students.length === 0 && !loadingStudents ? (
-                                                <div className="py-3 px-4 text-sm text-muted-foreground text-center">No students found</div>
-                                            ) : (
-                                                students.map(s => (
-                                                    <SelectItem key={s.id} value={String(s.id)}>
-                                                        <span className="flex items-center gap-2">
-                                                            <User className="w-3.5 h-3.5 text-muted-foreground" />
-                                                            {s.name}
-                                                            {s.grade && <span className="text-xs text-muted-foreground ml-1">({s.grade})</span>}
-                                                        </span>
-                                                    </SelectItem>
-                                                ))
-                                            )}
-                                        </SelectContent>
-                                    </Select>
-                                    {errors.studentName && <p className="text-xs text-red-500">{errors.studentName}</p>}
                                 </div>
                             </div>
 
@@ -394,9 +357,9 @@ const ScienceAnalyst = () => {
                                 )}
                             </div>
 
-                                {errors.file && (
-                                    <p className="text-xs text-red-500 mt-1">{errors.file}</p>
-                                )}
+                            {errors.file && (
+                                <p className="text-xs text-red-500 mt-1">{errors.file}</p>
+                            )}
 
                             {/* Validation summary + Analyze Button */}
                             <div className="flex items-center justify-between gap-4">
