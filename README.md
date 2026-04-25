@@ -32,7 +32,6 @@
 ### 🎓 For Students
 - **Course Browsing:** Discover and enroll in a variety of courses.
 - **Interactive Learning:** Watch video lessons and download PDF study materials.
-- **AI-Powered Exams:** Take MCQ and essay exams with auto-grading powered by AI.
 - **Progress Tracking:** Monitor grades and performance analytics over time.
 - **Seamless Payments:** Make online and offline payments for course enrollments.
 
