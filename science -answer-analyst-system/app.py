@@ -325,7 +325,7 @@ if __name__ == '__main__':
         print(f" {len(analyzer.dataset)} questions loaded from trained model")
     else:
         print("  No trained model found. Running in fallback mode.")
-        print("   Run Google Colab training to get better accuracy!")
+        
     
     print(f"\n Starting server on http://localhost:5000")
     print("=" * 50)

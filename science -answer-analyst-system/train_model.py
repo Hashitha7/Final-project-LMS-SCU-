@@ -88,7 +88,7 @@ def main():
     print(f" Model trained and saved to: {MODEL_PATH}")
     print(f"    Model size: {model_size:.1f} MB")
     print(f"    Total Q&A pairs: {len(df)}")
-    print(f"\n Restart your Python Flask server to load the new model!")
+    print(f"\n Restart  Python Flask server to load the new model!")
 
 if __name__ == "__main__":
     main()

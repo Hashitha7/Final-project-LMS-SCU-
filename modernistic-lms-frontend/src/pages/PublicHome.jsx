@@ -59,7 +59,7 @@ const PublicHome = () => {
           <div className="text-center mb-16 max-w-2xl mx-auto">
             <h2 className="text-3xl font-bold mb-4">Everything Your LMS Needs</h2>
             <p className="text-muted-foreground text-lg">
-              Production-ready modules already available in this system for day-to-day school operations.
+              Production-ready modules already available in this system for day-to-day  operations.
             </p>
           </div>
 
@@ -68,7 +68,7 @@ const PublicHome = () => {
               {
                 icon: BookOpen,
                 title: 'AI Answer Analyst',
-                desc: 'Upload student written answers and get instant science scoring, missing keyword analysis, and topic-based feedback.'
+                desc: 'Upload student written/typed answers and get instant science scoring, missing keyword analysis, and feedback.'
               },
               {
                 icon: Award,
@@ -83,7 +83,7 @@ const PublicHome = () => {
               {
                 icon: Users,
                 title: 'Role-Based Portals',
-                desc: 'Separate experiences for Institute Admins, Teachers, and Students with secure role-aware navigation.'
+                desc: 'Separate experiences for Institute Admin, Teachers, and Students with secure role-aware navigation.'
               },
               {
                 icon: CreditCard,
@@ -126,7 +126,6 @@ const PublicHome = () => {
                 {[
                   'Student, Teacher, and Institute account management',
                   'Course, class, lesson, and exam administration',
-                  'Online card payments + offline deposit handling',
                   'Science answer evaluation with AI support'
                 ].map((item) => (<div key={item} className="flex items-center gap-3">
                   <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
@@ -153,7 +152,7 @@ const PublicHome = () => {
 
             <h2 className="text-3xl md:text-5xl font-bold mb-6 relative z-10 tracking-tight">Ready to Run Your LMS Efficiently?</h2>
             <p className="text-primary-foreground/90 text-xl mb-10 max-w-2xl mx-auto relative z-10 font-medium">
-              Launch your institute workflow with role-based access, smart payment handling, and AI-assisted science evaluation.
+              Launch your  workflow with role-based access, smart payment handling, and AI-assisted science evaluation.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center relative z-10">
               <Button asChild size="lg" variant="secondary" className="h-14 px-8 text-lg rounded-full text-primary font-bold shadow-lg">
