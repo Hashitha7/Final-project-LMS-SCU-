@@ -39,8 +39,7 @@
 ### 👨‍🏫 For Teachers
 - **Course Management:** Create, update, and organize educational content.
 - **Resource Uploads:** Share video tutorials, PDF notes, and assignments easily.
-- **Advanced Assessments:** Design diverse exam papers with built-in integrity tools (anti-copy/paste, fullscreen tracking).
-- **Automated Grading:** Let the AI Answer Analyst help grade science essays and MCQs.
+- **Automated Grading:** Let the AI Answer Analyst help grade science essays .
 - **Communication:** Schedule Zoom classes directly and send SMS notifications.
 
 ### 🛡️ For Administrators
@@ -55,9 +54,9 @@
 | Frontend ⚛️ | Backend 🍃 | Database 🗄️ | Integrations 🔌 |
 |---|---|---|---|
 | **React 18** | **Spring Boot 3.2** | **MySQL 8.0** | **Zoom API** |
-| Vite | Java 17 | H2 (Dev fallback) | **SMS Gateway** |
-| Tailwind CSS | Spring Security (JWT) | Spring Data JPA | **Science AI Analyst (Python)** |
-| Radix UI / Shadcn | Maven | Hibernate | |
+| Vite | Java 17 | **SMS Gateway** |
+| CSS | Spring Security (JWT) | **Science AI Analyst (Python)** |
+| Radix UI / Shadcn | Maven | |
 
 ---
 
@@ -128,8 +127,8 @@ You can use the following default credentials to explore the system:
 | Role | Email | Password |
 | :--- | :--- | :--- |
 | **Admin** | `admin@modernisticlms.com` | `demo123` |
-| **Teacher** | `james@modernisticlms.com` | `demo123` |
-| **Student** | `alex@modernisticlms.com` | `demo123` |
+| **Teacher** | `teacher@modernisticlms.com` | `demo123` |
+| **Student** | `student@modernisticlms.com` | `demo123` |
 
 ---
 
@@ -148,5 +147,5 @@ The backend exposes a RESTful API protected by JWT authentication.
 ---
 
 <div align="center">
-  <p><b>Built with ❤️ to elevate modern education</b></p>
+  <p><b>Built with  elevate modern education</b></p>
 </div>

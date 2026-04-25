@@ -23,7 +23,7 @@ const Login = () => {
       if (!identifier || !password)
         throw new Error('Please fill all fields');
 
-      // Backend role is empty by default so it searches INSTITUTE -> TEACHER -> STUDENT
+      
       await login({ identifier, password, role: selectedRole });
 
       toast.success('Login successful');
