@@ -18,9 +18,15 @@ except ImportError:
 try:
     import pytesseract
     from PIL import Image
-    # Set the Tesseract binary path explicitly
-    TESSERACT_PATH = r'C:\Users\User\AppData\Local\Programs\Tesseract-OCR\tesseract.exe'
-    if os.path.exists(TESSERACT_PATH):
+    # Use TESSERACT_CMD env var if set, otherwise try system default,
+    # fallback to common Windows location
+    TESSERACT_PATH = os.environ.get('TESSERACT_CMD', '')
+    if not TESSERACT_PATH:
+        # Try common Windows location as fallback
+        win_path = r'C:\Users\User\AppData\Local\Programs\Tesseract-OCR\tesseract.exe'
+        if os.path.exists(win_path):
+            TESSERACT_PATH = win_path
+    if TESSERACT_PATH and os.path.exists(TESSERACT_PATH):
         pytesseract.pytesseract.tesseract_cmd = TESSERACT_PATH
     # Test if Tesseract binary is actually available
     try:

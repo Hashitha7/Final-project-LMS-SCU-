@@ -327,7 +327,10 @@ if __name__ == '__main__':
         print("  No trained model found. Running in fallback mode.")
         
     
-    print(f"\n Starting server on http://localhost:5000")
+    port = int(os.environ.get('PORT', 5000))
+    debug = os.environ.get('FLASK_DEBUG', 'true').lower() == 'true'
+    
+    print(f"\n Starting server on http://localhost:{port}")
     print("=" * 50)
     
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=port, debug=debug)

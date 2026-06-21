@@ -18,7 +18,8 @@ import java.util.Map;
 @RequestMapping("/api/science-analyst")
 public class ScienceAnalystController {
 
-    private static final String FLASK_URL = "http://localhost:5000";
+    @org.springframework.beans.factory.annotation.Value("${flask.service.url:http://localhost:5000}")
+    private String flaskUrl;
 
     @Autowired
     private ScienceAnswerRepository scienceAnswerRepository;
@@ -68,7 +69,7 @@ public class ScienceAnalystController {
 
             // Call Flask service
             ResponseEntity<Map> response = restTemplate.exchange(
-                    FLASK_URL + "/api/upload-and-analyze",
+                    flaskUrl + "/api/upload-and-analyze",
                     HttpMethod.POST,
                     requestEntity,
                     Map.class);
@@ -148,7 +149,7 @@ public class ScienceAnalystController {
             @RequestParam(value = "grade", required = false) String grade,
             @RequestParam(value = "subject", required = false) String subject) {
         try {
-            String url = FLASK_URL + "/api/topics";
+            String url = flaskUrl + "/api/topics";
             if (grade != null || subject != null) {
                 url += "?";
                 if (grade != null)
@@ -173,7 +174,7 @@ public class ScienceAnalystController {
     public ResponseEntity<?> healthCheck() {
         boolean flaskHealthy = false;
         try {
-            ResponseEntity<Map> response = restTemplate.getForEntity(FLASK_URL + "/api/health", Map.class);
+            ResponseEntity<Map> response = restTemplate.getForEntity(flaskUrl + "/api/health", Map.class);
             flaskHealthy = response.getStatusCode().is2xxSuccessful();
         } catch (Exception ignored) {
         }

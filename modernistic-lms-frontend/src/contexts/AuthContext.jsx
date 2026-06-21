@@ -1,5 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+
 const STORAGE_TOKEN_KEY = 'eduflow-auth-token';
 const STORAGE_USER_KEY = 'eduflow-auth-user';
 const STORAGE_RESET_KEY = 'eduflow-reset-token';
@@ -87,7 +89,7 @@ export const AuthProvider = ({ children }) => {
     }, [token]);
 
     const login = async ({ identifier, password, role }) => {
-        const response = await fetch('/api/auth/login', {
+        const response = await fetch(`${API_BASE_URL}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -123,7 +125,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     const registerStudent = async ({ name, email, mobile, password, grade }) => {
-        const response = await fetch('/api/auth/register/student', {
+        const response = await fetch(`${API_BASE_URL}/auth/register/student`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name, email, mobile, password, grade: grade || '' })
@@ -141,7 +143,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     const requestPasswordReset = async ({ identifier }) => {
-        const response = await fetch('/api/auth/forgot-password', {
+        const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: identifier })
