@@ -17,8 +17,10 @@ WORKDIR /app
 # Copy the built JAR
 COPY --from=build /app/target/*.jar app.jar
 
-# Render assigns a dynamic PORT via environment variable
-EXPOSE 8080
+# Render/HF assigns a dynamic PORT via environment variable or app_port metadata
+EXPOSE 7860
 
 # Run with production profile
-ENTRYPOINT ["java", "-jar", "-Dspring.profiles.active=prod", "-Dserver.port=${PORT:-8080}", "app.jar"]
+ENTRYPOINT ["java", "-jar", "-Dspring.profiles.active=prod", "app.jar"]
+
+
